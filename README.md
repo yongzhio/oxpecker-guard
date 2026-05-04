@@ -16,3 +16,4 @@ or [Guardrails AI](https://github.com/guardrails-ai/guardrails).
 A full README will be published with v1.
 
 — Yongzhi Ong
+Contact: [LinkedIn](https://www.linkedin.com/in/yongzhiong/)

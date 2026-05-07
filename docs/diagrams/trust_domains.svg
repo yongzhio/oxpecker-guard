@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 900 720" role="img" font-family="Helvetica, Arial, sans-serif">
+  <title>OPG trust domain map</title>
+  <desc>The trust domains in the OPG architecture. Domain 1 (orchestrator) contains Domain 2 (the foundation model). Domain 1 mediates access to Domains 3a (read-only tools) and 3b (consequential tools). Domain 4 (external content) is untrusted and re-enters Domain 2 only via Domain 1 wrapping. Domain 5 (external trust authorities) provides signed credentials the orchestrator can verify but the LLM cannot influence.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#A32D2D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 18px; font-weight: 600; fill: #1a1a1a; }
+    .legend { font-size: 11px; fill: #555; }
+    .domain-label { font-size: 13px; font-weight: 600; }
+    .domain-sub { font-size: 11px; }
+    .item { font-size: 11px; fill: #444; }
+    .arr { stroke: #444; stroke-width: 1.2; fill: none; }
+    .arr-data { stroke: #185FA5; stroke-width: 1.2; fill: none; }
+    .arr-untrusted { stroke: #A32D2D; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+    .arr-auth { stroke: #5F5E5A; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+  </style>
+
+  <text class="title" x="450" y="30" text-anchor="middle">OPG trust domain map</text>
+  <text class="legend" x="450" y="50" text-anchor="middle">Solid black = control · Solid blue = data · Dashed gray = signed authentication · Dashed red = untrusted content (must be wrapped)</text>
+
+  <!-- Domain 1: Orchestrator (large outer box containing Domain 2) -->
+  <rect x="40" y="80" width="500" height="320" rx="14" fill="#EEEDFE" stroke="#3C3489" stroke-width="0.8"/>
+  <text class="domain-label" x="60" y="105" fill="#3C3489">Domain 1 — Orchestrator</text>
+  <text class="domain-sub" x="60" y="122" fill="#534AB7">your code, your process</text>
+
+  <!-- Items inside Domain 1 -->
+  <text class="item" x="60" y="150">e.g., operator config (allowlists, rate limits, policies)</text>
+  <text class="item" x="60" y="168">e.g., agent loop and graph runner</text>
+  <text class="item" x="60" y="186">e.g., deterministic guardrails</text>
+  <text class="item" x="60" y="204">e.g., audit log writer</text>
+  <text class="item" x="60" y="222">e.g., authentication context</text>
+
+  <!-- Domain 2: Foundation model, nested inside Domain 1 -->
+  <rect x="80" y="245" width="420" height="135" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.8"/>
+  <text class="domain-label" x="100" y="270" fill="#633806">Domain 2 — Foundation model</text>
+  <text class="domain-sub" x="100" y="287" fill="#854F0B">the LLM itself; receives context, returns tokens</text>
+  <text class="item" x="100" y="312">cannot reach Domain 1 config, network, or tools</text>
+  <text class="item" x="100" y="330">treats all input as one undifferentiated stream</text>
+  <text class="item" x="100" y="348">the orchestrator can read what it emits;</text>
+  <text class="item" x="100" y="366">the model cannot read the orchestrator's state</text>
+
+  <!-- Domain 3a: Read-only tools (right side, top) -->
+  <rect x="600" y="80" width="270" height="100" rx="10" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <text class="domain-label" x="615" y="105" fill="#085041">Domain 3a — Read-only tools</text>
+  <text class="domain-sub" x="615" y="122" fill="#0F6E56">small blast radius</text>
+  <text class="item" x="615" y="148">e.g., web search, document read</text>
+  <text class="item" x="615" y="166">no intended side effects</text>
+
+  <!-- Domain 3b: Consequential tools (right side, middle) -->
+  <rect x="600" y="200" width="270" height="120" rx="10" fill="#FAECE7" stroke="#712B13" stroke-width="0.8"/>
+  <text class="domain-label" x="615" y="225" fill="#712B13">Domain 3b — Consequential tools</text>
+  <text class="domain-sub" x="615" y="242" fill="#993C1D">large blast radius</text>
+  <text class="item" x="615" y="268">e.g., send email, transfer funds, delete records</text>
+  <text class="item" x="615" y="286">require scope + MFA + human approval</text>
+  <text class="item" x="615" y="304">human-in-the-loop gate is mandatory</text>
+
+  <!-- Domain 4: External content (right side, bottom) -->
+  <rect x="600" y="340" width="270" height="135" rx="10" fill="#FCEBEB" stroke="#791F1F" stroke-width="0.8"/>
+  <text class="domain-label" x="615" y="365" fill="#791F1F">Domain 4 — External content</text>
+  <text class="domain-sub" x="615" y="382" fill="#A32D2D">entirely untrusted</text>
+  <text class="item" x="615" y="408">e.g., web pages, retrieved docs, tool results</text>
+  <text class="item" x="615" y="426">anything re-entering Domain 2 must be</text>
+  <text class="item" x="615" y="444">wrapped, tagged, treated as data</text>
+  <text class="item" x="615" y="462">indirect prompt injection lives in this flow</text>
+
+  <!-- Domain 5: External trust authorities (bottom left) -->
+  <rect x="40" y="500" width="500" height="170" rx="14" fill="#FBEAF0" stroke="#72243E" stroke-width="0.8"/>
+  <text class="domain-label" x="60" y="525" fill="#72243E">Domain 5 — External trust authorities</text>
+  <text class="domain-sub" x="60" y="542" fill="#993556">signed credentials, separate authentication channel</text>
+  <text class="item" x="60" y="568">e.g., identity providers (OAuth/OIDC)</text>
+  <text class="item" x="60" y="586">e.g., professional credentialing bodies</text>
+  <text class="item" x="60" y="604">e.g., MFA providers, certificate authorities</text>
+  <text class="item" x="60" y="630">issues attestations the orchestrator verifies</text>
+  <text class="item" x="60" y="648">but the LLM cannot influence or generate</text>
+
+  <!-- USER labels and arrows - placed clearly outside Domain 1 boundary, above and below -->
+  <!-- User prompt: arrow points INTO Domain 1 from above-left -->
+  <text class="domain-sub" x="60" y="72" fill="#1a1a1a" font-weight="600">user prompt enters Domain 1 →</text>
+
+  <!-- User reply: arrow points OUT of Domain 1 toward the left, below the box -->
+  <text class="domain-sub" x="60" y="418" fill="#1a1a1a" font-weight="600">← user reply leaves Domain 1</text>
+
+  <!-- Arrow: Domain 1 ↔ Domain 3a (mediated tool call) -->
+  <line x1="540" y1="130" x2="600" y2="130" class="arr" marker-end="url(#arrow)"/>
+  <line x1="600" y1="155" x2="540" y2="155" class="arr-data" marker-end="url(#arrow-blue)"/>
+
+  <!-- Arrow: Domain 1 ↔ Domain 3b -->
+  <line x1="540" y1="240" x2="600" y2="240" class="arr" marker-end="url(#arrow)"/>
+  <line x1="600" y1="270" x2="540" y2="270" class="arr-data" marker-end="url(#arrow-blue)"/>
+
+  <!-- Arrow: Domain 4 (untrusted content) into Domain 1 (where it gets wrapped) -->
+  <line x1="600" y1="400" x2="540" y2="380" class="arr-untrusted" marker-end="url(#arrow-red)"/>
+
+  <!-- Arrow: Domain 5 (signed attestation) into Domain 1 -->
+  <line x1="290" y1="500" x2="290" y2="400" class="arr-auth" marker-end="url(#arrow)"/>
+
+  <!-- Notes / annotations -->
+  <text class="legend" x="450" y="690" text-anchor="middle">Domain 1 contains Domain 2. Domain 1 mediates all access to Domains 3a/3b.</text>
+  <text class="legend" x="450" y="708" text-anchor="middle">Domain 4 content re-entering Domain 2 must pass through Domain 1's wrapping. Domain 5 establishes scoped access for Domains 3a/3b.</text>
+</svg>

@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 900 980" role="img" font-family="Helvetica, Arial, sans-serif">
+  <title>OPG runtime flow for a single request</title>
+  <desc>Sequence of operations within the orchestrator core when a single user request flows through the system, with deterministic guards invoked at each checkpoint.</desc>
+
+  <defs>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow2-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow2-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#A32D2D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 18px; font-weight: 600; fill: #1a1a1a; }
+    .step-num { font-size: 11px; font-weight: 700; fill: #534AB7; }
+    .box-title { font-size: 12.5px; font-weight: 600; fill: #1a1a1a; }
+    .box-sub { font-size: 11px; fill: #555; }
+    .legend { font-size: 11px; fill: #555; }
+    .label { font-size: 10.5px; fill: #444; font-style: italic; }
+    .arr { stroke: #444; stroke-width: 1.2; fill: none; }
+    .arr-guard { stroke: #0F6E56; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+    .arr-stop { stroke: #A32D2D; stroke-width: 1.5; fill: none; }
+  </style>
+
+  <text class="title" x="450" y="30" text-anchor="middle">OPG runtime flow for a single request</text>
+  <text class="legend" x="450" y="50" text-anchor="middle">Solid black = main flow · Dashed green = guard invocation · Solid red = guard rejection / loop termination</text>
+
+  <!-- Step 1: User request -->
+  <rect x="320" y="80" width="260" height="46" rx="6" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="100">1</text>
+  <text class="box-title" x="450" y="103" text-anchor="middle">user request arrives</text>
+  <text class="box-sub" x="450" y="119" text-anchor="middle">user_id, prompt, request metadata</text>
+
+  <line x1="450" y1="126" x2="450" y2="148" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 2: Load operator config -->
+  <rect x="320" y="148" width="260" height="46" rx="6" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="168">2</text>
+  <text class="box-title" x="450" y="171" text-anchor="middle">load operator config</text>
+  <text class="box-sub" x="450" y="187" text-anchor="middle">allowlist, rate limits, policy thresholds</text>
+
+  <line x1="450" y1="194" x2="450" y2="216" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 3: Input guards -->
+  <rect x="320" y="216" width="260" height="46" rx="6" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="236">3</text>
+  <text class="box-title" x="450" y="239" text-anchor="middle">input guards</text>
+  <text class="box-sub" x="450" y="255" text-anchor="middle">PII, injection classifier, ACL pre-filter</text>
+
+  <!-- Guards arrow + reject path -->
+  <line x1="580" y1="239" x2="640" y2="239" class="arr-guard" marker-end="url(#arrow2-green)"/>
+  <rect x="640" y="220" width="170" height="40" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text class="box-title" x="725" y="240" text-anchor="middle">guards catalog</text>
+  <text class="box-sub" x="725" y="254" text-anchor="middle">deterministic, in Domain 1</text>
+
+  <line x1="450" y1="262" x2="450" y2="285" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="465" y="278">if all pass</text>
+
+  <!-- Reject path on left from step 3 -->
+  <path d="M 320 239 L 90 239 L 90 920 L 280 920" class="arr-stop" marker-end="url(#arrow2-red)"/>
+  <text class="label" x="100" y="232">reject</text>
+
+  <!-- Step 4: Context assembly -->
+  <rect x="320" y="285" width="260" height="46" rx="6" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="305">4</text>
+  <text class="box-title" x="450" y="308" text-anchor="middle">context assembly (Layer 2)</text>
+  <text class="box-sub" x="450" y="324" text-anchor="middle">system + memory + retrieved + history + query</text>
+
+  <line x1="450" y1="331" x2="450" y2="353" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 5: Model call -->
+  <rect x="320" y="353" width="260" height="46" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="373">5</text>
+  <text class="box-title" x="450" y="376" text-anchor="middle">model call (Layer 1)</text>
+  <text class="box-sub" x="450" y="392" text-anchor="middle">via model_client.py — Domain boundary crossed</text>
+
+  <line x1="450" y1="399" x2="450" y2="421" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 6: Response decision -->
+  <polygon points="450,421 580,447 450,473 320,447" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="345" y="442">6</text>
+  <text class="box-title" x="450" y="447" text-anchor="middle">response type?</text>
+  <text class="box-sub" x="450" y="461" text-anchor="middle">final_answer | tool_call</text>
+
+  <!-- Tool call path (down) -->
+  <line x1="450" y1="473" x2="450" y2="500" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="465" y="492">tool_call</text>
+
+  <!-- Final answer path (right side) -->
+  <path d="M 580 447 L 720 447 L 720 770" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="588" y="440">final</text>
+
+  <!-- Step 7: Action guards -->
+  <rect x="320" y="500" width="260" height="46" rx="6" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="520">7</text>
+  <text class="box-title" x="450" y="523" text-anchor="middle">action guards</text>
+  <text class="box-sub" x="450" y="539" text-anchor="middle">allowlist + blast-radius + rate limit + HITL</text>
+
+  <line x1="580" y1="523" x2="635" y2="523" class="arr-guard" marker-end="url(#arrow2-green)"/>
+
+  <line x1="450" y1="546" x2="450" y2="568" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="465" y="563">if allowed</text>
+
+  <!-- Reject path - back to common reject target -->
+  <path d="M 320 523 L 200 523 L 200 920 L 280 920" class="arr-stop" marker-end="url(#arrow2-red)"/>
+
+  <!-- Step 8: Tool dispatch -->
+  <rect x="320" y="568" width="260" height="46" rx="6" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="588">8</text>
+  <text class="box-title" x="450" y="591" text-anchor="middle">tool dispatch (Layer 4)</text>
+  <text class="box-sub" x="450" y="607" text-anchor="middle">MCP / API call — crosses to Domain 3</text>
+
+  <line x1="450" y1="614" x2="450" y2="636" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 9: Tool result returns; injection-risk note -->
+  <rect x="320" y="636" width="260" height="46" rx="6" fill="#fff" stroke="#A32D2D" stroke-width="0.7"/>
+  <text class="step-num" x="335" y="656">9</text>
+  <text class="box-title" x="450" y="659" text-anchor="middle">tool result re-enters context</text>
+  <text class="box-sub" x="450" y="675" text-anchor="middle">indirect-injection risk: tag and wrap as data</text>
+
+  <line x1="450" y1="682" x2="450" y2="704" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Step 10: Termination check -->
+  <polygon points="450,704 590,732 450,760 310,732" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="725">10</text>
+  <text class="box-title" x="450" y="730" text-anchor="middle">termination check</text>
+  <text class="box-sub" x="450" y="744" text-anchor="middle">max iter? repeat? budget?</text>
+
+  <!-- Loop back arrow on the right side -->
+  <path d="M 590 732 L 660 732 L 660 285 L 580 285" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="608" y="500">loop: back to context assembly</text>
+
+  <!-- Continue down to output guards -->
+  <line x1="450" y1="760" x2="450" y2="782" class="arr" marker-end="url(#arrow2)"/>
+  <text class="label" x="465" y="778">if final</text>
+
+  <!-- Step 11: Output guards -->
+  <rect x="320" y="782" width="260" height="46" rx="6" fill="#fff" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="802">11</text>
+  <text class="box-title" x="450" y="805" text-anchor="middle">output guards</text>
+  <text class="box-sub" x="450" y="821" text-anchor="middle">PII exfil, schema, grounding, topic policy</text>
+
+  <line x1="580" y1="805" x2="635" y2="805" class="arr-guard" marker-end="url(#arrow2-green)"/>
+
+  <line x1="450" y1="828" x2="450" y2="850" class="arr" marker-end="url(#arrow2)"/>
+
+  <!-- Reject path -->
+  <path d="M 320 805 L 240 805 L 240 920 L 280 920" class="arr-stop" marker-end="url(#arrow2-red)"/>
+
+  <!-- Step 12: Audit log + response (combined) -->
+  <rect x="320" y="850" width="260" height="46" rx="6" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
+  <text class="step-num" x="335" y="870">12</text>
+  <text class="box-title" x="450" y="873" text-anchor="middle">finalize: audit log + response</text>
+  <text class="box-sub" x="450" y="889" text-anchor="middle">audit trail written; response returned to user</text>
+
+  <!-- Reject sink -->
+  <rect x="280" y="900" width="180" height="40" rx="6" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text class="box-title" x="370" y="924" text-anchor="middle">refusal + audit</text>
+
+  <!-- Notes at bottom -->
+  <text class="legend" x="450" y="958" text-anchor="middle">Steps 3, 7, 11 are the three guard checkpoints. Audit events are emitted at every step (not shown).</text>
+</svg>

@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 900 720" role="img" font-family="Helvetica, Arial, sans-serif">
+  <title>OPG abstract orchestrator model</title>
+  <desc>Generic representation of the orchestrator's execution model: arbitrary nodes connected by edges with configurable guard slots at every transition, no prescribed checkpoints, with operator config and demo graph spec as inputs that determine which guards are active where.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 18px; font-weight: 600; fill: #1a1a1a; }
+    .legend { font-size: 11px; fill: #555; }
+    .node-label { font-size: 13px; font-weight: 600; fill: #1a1a1a; }
+    .node-sub { font-size: 11px; fill: #555; }
+    .slot-label { font-size: 11px; fill: #534AB7; font-style: italic; }
+    .annot { font-size: 10.5px; fill: #444; font-style: italic; }
+    .config-label { font-size: 12px; font-weight: 600; fill: #444441; }
+    .config-sub { font-size: 11px; fill: #555; }
+    .arr { stroke: #444; stroke-width: 1.2; fill: none; }
+    .arr-config { stroke: #5F5E5A; stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+    .arr-loop { stroke: #444; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+  </style>
+
+  <text class="title" x="450" y="30" text-anchor="middle">OPG abstract orchestrator model</text>
+  <text class="legend" x="450" y="50" text-anchor="middle">Solid = control flow · Dashed gray = config · Dashed black = optional / loop · Purple slots = configurable guard slots</text>
+
+  <!-- Top: Configuration inputs -->
+  <rect x="30" y="80" width="280" height="120" rx="10" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+  <text class="config-label" x="170" y="100" text-anchor="middle">Configuration inputs</text>
+  <rect x="50" y="115" width="240" height="34" rx="5" fill="#fff" stroke="#888780" stroke-width="0.5"/>
+  <text class="node-label" x="170" y="131" text-anchor="middle">operator_config.yaml</text>
+  <text class="node-sub" x="170" y="144" text-anchor="middle">policy: which guards run at which slots</text>
+  <rect x="50" y="155" width="240" height="34" rx="5" fill="#fff" stroke="#888780" stroke-width="0.5"/>
+  <text class="node-label" x="170" y="171" text-anchor="middle">demo graph spec</text>
+  <text class="node-sub" x="170" y="184" text-anchor="middle">declarative DSL: nodes and edges</text>
+
+  <!-- Right: Guard catalog -->
+  <rect x="600" y="80" width="270" height="120" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text class="config-label" x="735" y="100" text-anchor="middle" fill="#085041">Guards catalog (pluggable)</text>
+  <text class="node-sub" x="735" y="118" text-anchor="middle">deterministic checks; pure functions of inputs</text>
+  <text class="node-sub" x="735" y="138" text-anchor="middle">allowlist · rate_limit · schema_validate</text>
+  <text class="node-sub" x="735" y="156" text-anchor="middle">acl_filter · provenance · blast_radius · ...</text>
+  <text class="node-sub" x="735" y="180" text-anchor="middle" font-style="italic">any guard can be bound to any slot</text>
+
+  <!-- Arrows from config and catalog into graph runner -->
+  <path d="M 170 200 L 170 230 L 320 230 L 320 270" class="arr-config" marker-end="url(#arrow-gray)"/>
+  <text class="annot" x="180" y="222">selects which guards run, where</text>
+  <path d="M 735 200 L 735 230 L 580 230 L 580 270" class="arr-config" marker-end="url(#arrow-gray)"/>
+  <text class="annot" x="745" y="222" text-anchor="end">guards available to bind</text>
+
+  <!-- Center: Graph runner zone -->
+  <rect x="60" y="270" width="800" height="380" rx="12" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text class="config-label" x="450" y="293" text-anchor="middle" fill="#3C3489">Graph runner walks the demo's graph; emits audit events at every transition</text>
+
+  <!-- Generic graph: 4 nodes connected, demonstrating "any node any guard slot" -->
+  <!-- Node A -->
+  <rect x="100" y="330" width="120" height="56" rx="6" fill="#fff" stroke="#7F77DD" stroke-width="1"/>
+  <text class="node-label" x="160" y="352" text-anchor="middle">Node A</text>
+  <text class="node-sub" x="160" y="370" text-anchor="middle">work step</text>
+
+  <!-- Slot before A (entry) -->
+  <rect x="55" y="350" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="72" y="364" text-anchor="middle">slot</text>
+  <line x1="90" y1="358" x2="100" y2="358" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Slot between A and B -->
+  <rect x="240" y="350" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="257" y="364" text-anchor="middle">slot</text>
+  <line x1="220" y1="358" x2="240" y2="358" class="arr" marker-end="url(#arrow)"/>
+  <line x1="275" y1="358" x2="295" y2="358" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Node B -->
+  <rect x="295" y="330" width="120" height="56" rx="6" fill="#fff" stroke="#7F77DD" stroke-width="1"/>
+  <text class="node-label" x="355" y="352" text-anchor="middle">Node B</text>
+  <text class="node-sub" x="355" y="370" text-anchor="middle">work step</text>
+
+  <!-- Slot between B and decision -->
+  <rect x="435" y="350" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="452" y="364" text-anchor="middle">slot</text>
+  <line x1="415" y1="358" x2="435" y2="358" class="arr" marker-end="url(#arrow)"/>
+  <line x1="470" y1="358" x2="490" y2="358" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Decision diamond -->
+  <polygon points="490,358 545,388 600,358 545,328" fill="#fff" stroke="#7F77DD" stroke-width="1"/>
+  <text class="node-label" x="545" y="361" text-anchor="middle">Decision</text>
+
+  <!-- Slot from decision to Node C (path 1) -->
+  <rect x="620" y="350" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="637" y="364" text-anchor="middle">slot</text>
+  <line x1="600" y1="358" x2="620" y2="358" class="arr" marker-end="url(#arrow)"/>
+  <line x1="655" y1="358" x2="675" y2="358" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Node C -->
+  <rect x="675" y="330" width="120" height="56" rx="6" fill="#fff" stroke="#7F77DD" stroke-width="1"/>
+  <text class="node-label" x="735" y="352" text-anchor="middle">Node C</text>
+  <text class="node-sub" x="735" y="370" text-anchor="middle">work step</text>
+
+  <!-- Slot after C (terminal) -->
+  <rect x="810" y="350" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="827" y="364" text-anchor="middle">slot</text>
+  <line x1="795" y1="358" x2="810" y2="358" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Decision branch downward to Node D -->
+  <line x1="545" y1="388" x2="545" y2="420" class="arr" marker-end="url(#arrow)"/>
+  <rect x="528" y="424" width="35" height="20" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 2"/>
+  <text class="slot-label" x="545" y="438" text-anchor="middle">slot</text>
+  <line x1="545" y1="444" x2="545" y2="460" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Node D (loop-back path) -->
+  <rect x="485" y="460" width="120" height="56" rx="6" fill="#fff" stroke="#7F77DD" stroke-width="1"/>
+  <text class="node-label" x="545" y="482" text-anchor="middle">Node D</text>
+  <text class="node-sub" x="545" y="500" text-anchor="middle">work step</text>
+
+  <!-- Loop back from D to A's entry slot -->
+  <path d="M 485 488 L 90 488 L 90 388 L 72 388 L 72 370" class="arr-loop" marker-end="url(#arrow)"/>
+  <text class="annot" x="270" y="481">loop edge — graph supports cycles</text>
+
+  <!-- Annotations within graph runner -->
+  <text class="annot" x="450" y="555" text-anchor="middle">Every transition between nodes (and entry / exit) has a guard slot.</text>
+  <text class="annot" x="450" y="572" text-anchor="middle">A slot may be empty, may bind one guard, or may bind multiple guards in sequence.</text>
+  <text class="annot" x="450" y="589" text-anchor="middle">Empty slot = pass-through. Bound guard = deterministic check; reject sends to a refusal+audit terminal.</text>
+  <text class="annot" x="450" y="606" text-anchor="middle">Node count, node types, edge structure, and which slots are bound are all per-demo configuration.</text>
+  <text class="annot" x="450" y="623" text-anchor="middle">No node type is privileged. No checkpoint is prescribed. The graph is whatever the demo says it is.</text>
+
+  <!-- Bottom: outputs -->
+  <rect x="290" y="678" width="320" height="32" rx="6" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
+  <text class="node-label" x="450" y="699" text-anchor="middle">Audit log + checkpoint store + benchmark results</text>
+
+  <!-- Arrow from graph runner to outputs -->
+  <line x1="450" y1="650" x2="450" y2="678" class="arr" marker-end="url(#arrow)"/>
+</svg>

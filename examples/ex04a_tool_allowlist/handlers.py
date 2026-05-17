@@ -109,10 +109,13 @@ def make_call_model_handler(
         state.counters.input_tokens += response.input_tokens
         state.counters.output_tokens += response.output_tokens
 
-        if response.tool_calls:
-            state.append_message(Message(role="assistant", tool_calls=response.tool_calls))
-        else:
-            state.append_message(Message(role="assistant", content=response.text))
+        state.append_message(
+            Message(
+                role="assistant",
+                content=response.text,
+                tool_calls=response.tool_calls,
+            )
+        )
 
     return _call_model
 

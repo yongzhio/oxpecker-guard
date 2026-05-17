@@ -18,7 +18,7 @@ Guards run in this order in the `after` slot of `call_model`. The first rejectio
 - [Ollama](https://ollama.com) running locally with the model tag created:
   ```
   ollama pull qwen3.5:9b
-  ollama create qwen3.5:9b-65k -f examples/ex01_schema_validation/Modelfile
+  ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
   ```
 - Repo installed: `pip install -e ".[dev]"` from the repo root
 
@@ -147,7 +147,7 @@ clearing failures seen with smaller values on some Ollama builds. Create the
 tag once with:
 
 ```bash
-ollama create qwen3.5:9b-65k -f examples/ex01_schema_validation/Modelfile
+ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
 ```
 
 The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB

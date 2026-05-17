@@ -194,6 +194,12 @@ class GraphRunner:
                 f"declared signals {gate.signals!r}"
             )
 
+        # Seal as consumed BEFORE emitting gate_signal. This is intentional and
+        # different from the v1 design's stated order; see opg_design_v1.2.md
+        # deviation F. Rationale: if the process crashes between the seal-on-disk
+        # and the gate_signal emission, the audit has a gap but re-resume is
+        # blocked. The inverse order would allow double-resume on a crashed
+        # gate_signal emission, violating decision 16 (flows are unique).
         self._checkpoint_store.seal_consumed(checkpoint_id)
 
         self._audit.emit(

@@ -1,10 +1,16 @@
-"""Checkpoint save / load round trip."""
+"""Checkpoint save / load round trip and seal state-machine tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from opg.core.checkpoint import CHECKPOINT_SCHEMA_VERSION, Checkpoint, CheckpointStore
+from opg.core.checkpoint import (
+    CHECKPOINT_SCHEMA_VERSION,
+    Checkpoint,
+    CheckpointAbandonedError,
+    CheckpointConsumedError,
+    CheckpointStore,
+)
 from opg.core.state import Message, RunState
 
 
@@ -55,3 +61,85 @@ def test_checkpoint_default_status_is_pending() -> None:
     assert cp.consumed_at is None
     assert cp.abandoned_at is None
     assert cp.abandoned_reason is None
+
+
+# ---------------------------------------------------------------------------
+# Seal state-machine tests
+# ---------------------------------------------------------------------------
+
+
+def test_seal_consumed_marks_pending_checkpoint_consumed(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+
+    updated = store.seal_consumed(cp.checkpoint_id)
+
+    assert updated.status == "consumed"
+    assert updated.consumed_at is not None
+    # Persisted on disk
+    assert store.load(cp.checkpoint_id).status == "consumed"
+
+
+def test_seal_consumed_on_consumed_raises(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+    store.seal_consumed(cp.checkpoint_id)
+
+    import pytest
+
+    with pytest.raises(CheckpointConsumedError):
+        store.seal_consumed(cp.checkpoint_id)
+
+
+def test_seal_consumed_on_abandoned_raises(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+    store.seal_abandoned(cp.checkpoint_id, reason="timed out")
+
+    import pytest
+
+    with pytest.raises(CheckpointAbandonedError):
+        store.seal_consumed(cp.checkpoint_id)
+
+
+def test_seal_abandoned_marks_pending_checkpoint_abandoned(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+
+    updated = store.seal_abandoned(cp.checkpoint_id, reason="reviewer unavailable")
+
+    assert updated.status == "abandoned"
+    assert updated.abandoned_at is not None
+    assert updated.abandoned_reason == "reviewer unavailable"
+    # Persisted on disk
+    on_disk = store.load(cp.checkpoint_id)
+    assert on_disk.status == "abandoned"
+    assert on_disk.abandoned_reason == "reviewer unavailable"
+
+
+def test_seal_abandoned_on_consumed_raises(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+    store.seal_consumed(cp.checkpoint_id)
+
+    import pytest
+
+    with pytest.raises(CheckpointConsumedError):
+        store.seal_abandoned(cp.checkpoint_id, reason="late")
+
+
+def test_seal_abandoned_on_abandoned_raises(tmp_path: Path) -> None:
+    store = CheckpointStore.at(tmp_path)
+    cp = _make_checkpoint()
+    store.save(cp)
+    store.seal_abandoned(cp.checkpoint_id, reason="first")
+
+    import pytest
+
+    with pytest.raises(CheckpointAbandonedError):
+        store.seal_abandoned(cp.checkpoint_id, reason="second")

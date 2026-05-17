@@ -21,15 +21,27 @@ Per the level-set doc, the runner is held constant across demos (MBT-11).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 from opg.core.audit import AuditLog
-from opg.core.checkpoint import Checkpoint, CheckpointStore
+from opg.core.checkpoint import (
+    Checkpoint,
+    CheckpointAbandonedError,
+    CheckpointConsumedError,
+    CheckpointStore,
+)
 from opg.core.config import OperatorConfig
 from opg.core.graph import Graph, GuardPass, SlotPosition
 from opg.core.state import RunState
+
+# Re-exported for backward compatibility — callers that import these from
+# opg.core.orchestrator continue to work after the classes moved to checkpoint.
+__all__ = [
+    "CheckpointAbandonedError",
+    "CheckpointConsumedError",
+    "GraphVersionMismatchError",
+]
 
 # ---------------------------------------------------------------------------
 # Outcome types
@@ -93,22 +105,6 @@ Outcome = CompletedOutcome | RejectedOutcome | CapExceededOutcome | ErrorOutcome
 # ---------------------------------------------------------------------------
 # Exceptions raised by resume() and abandon_checkpoint()
 # ---------------------------------------------------------------------------
-
-
-class CheckpointConsumedError(Exception):
-    """Raised when resume or abandon is attempted on an already-consumed checkpoint."""
-
-    def __init__(self, checkpoint_id: UUID) -> None:
-        self.checkpoint_id = checkpoint_id
-        super().__init__(f"checkpoint {checkpoint_id} is already consumed")
-
-
-class CheckpointAbandonedError(Exception):
-    """Raised when resume or abandon is attempted on an already-abandoned checkpoint."""
-
-    def __init__(self, checkpoint_id: UUID) -> None:
-        self.checkpoint_id = checkpoint_id
-        super().__init__(f"checkpoint {checkpoint_id} is already abandoned")
 
 
 class GraphVersionMismatchError(Exception):
@@ -198,10 +194,7 @@ class GraphRunner:
                 f"declared signals {gate.signals!r}"
             )
 
-        consumed = checkpoint.model_copy(
-            update={"status": "consumed", "consumed_at": datetime.now(timezone.utc)}
-        )
-        self._checkpoint_store.save(consumed)
+        self._checkpoint_store.seal_consumed(checkpoint_id)
 
         self._audit.emit(
             "gate_signal",
@@ -239,21 +232,7 @@ class GraphRunner:
         if self._checkpoint_store is None:
             raise RuntimeError("GraphRunner has no checkpoint_store configured")
 
-        checkpoint = self._checkpoint_store.load(checkpoint_id)
-
-        if checkpoint.status == "consumed":
-            raise CheckpointConsumedError(checkpoint_id)
-        if checkpoint.status == "abandoned":
-            raise CheckpointAbandonedError(checkpoint_id)
-
-        abandoned = checkpoint.model_copy(
-            update={
-                "status": "abandoned",
-                "abandoned_at": datetime.now(timezone.utc),
-                "abandoned_reason": reason,
-            }
-        )
-        self._checkpoint_store.save(abandoned)
+        abandoned = self._checkpoint_store.seal_abandoned(checkpoint_id, reason)
 
         self._audit.emit(
             "checkpoint_abandoned",

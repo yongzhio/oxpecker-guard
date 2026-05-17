@@ -18,7 +18,7 @@ Checkpoint state model (decision 17):
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -29,6 +29,32 @@ from typing_extensions import Self
 from opg.core.state import RunState
 
 CHECKPOINT_SCHEMA_VERSION = 2
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint state-machine errors
+# ---------------------------------------------------------------------------
+
+
+class CheckpointConsumedError(Exception):
+    """Raised when seal_consumed or seal_abandoned is attempted on a consumed checkpoint."""
+
+    def __init__(self, checkpoint_id: UUID) -> None:
+        self.checkpoint_id = checkpoint_id
+        super().__init__(f"checkpoint {checkpoint_id} is already consumed")
+
+
+class CheckpointAbandonedError(Exception):
+    """Raised when seal_consumed or seal_abandoned is attempted on an abandoned checkpoint."""
+
+    def __init__(self, checkpoint_id: UUID) -> None:
+        self.checkpoint_id = checkpoint_id
+        super().__init__(f"checkpoint {checkpoint_id} is already abandoned")
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint model
+# ---------------------------------------------------------------------------
 
 
 class Checkpoint(BaseModel):
@@ -83,3 +109,41 @@ class CheckpointStore:
         with path.open("r", encoding="utf-8") as fh:
             data: dict[str, Any] = json.load(fh)
         return Checkpoint.model_validate(data)
+
+    def seal_consumed(self, checkpoint_id: UUID) -> Checkpoint:
+        """Transition a pending checkpoint to consumed. Returns the updated checkpoint.
+
+        Raises CheckpointConsumedError if already consumed,
+        CheckpointAbandonedError if already abandoned.
+        """
+        cp = self.load(checkpoint_id)
+        if cp.status == "consumed":
+            raise CheckpointConsumedError(checkpoint_id)
+        if cp.status == "abandoned":
+            raise CheckpointAbandonedError(checkpoint_id)
+        updated = cp.model_copy(
+            update={"status": "consumed", "consumed_at": datetime.now(timezone.utc)}
+        )
+        self.save(updated)
+        return updated
+
+    def seal_abandoned(self, checkpoint_id: UUID, reason: str) -> Checkpoint:
+        """Transition a pending checkpoint to abandoned. Returns the updated checkpoint.
+
+        Raises CheckpointConsumedError if already consumed,
+        CheckpointAbandonedError if already abandoned.
+        """
+        cp = self.load(checkpoint_id)
+        if cp.status == "consumed":
+            raise CheckpointConsumedError(checkpoint_id)
+        if cp.status == "abandoned":
+            raise CheckpointAbandonedError(checkpoint_id)
+        updated = cp.model_copy(
+            update={
+                "status": "abandoned",
+                "abandoned_at": datetime.now(timezone.utc),
+                "abandoned_reason": reason,
+            }
+        )
+        self.save(updated)
+        return updated

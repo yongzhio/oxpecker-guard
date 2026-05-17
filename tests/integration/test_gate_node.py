@@ -40,6 +40,16 @@ async def noop(_state: RunState) -> None:
     return None
 
 
+async def noop_alt(_state: RunState) -> None:
+    """Functionally identical to noop but a different named function.
+
+    Used to verify that swapping a node handler changes the graph hash even
+    when the topology is unchanged (decision 18 — handler identity is part of
+    the graph version).
+    """
+    return None
+
+
 def passing_guard(_state: RunState) -> GuardVerdict:
     return GuardPass(guard_name="passing")
 
@@ -304,6 +314,53 @@ async def test_resume_with_changed_graph_raises_version_mismatch(tmp_path: Path)
             .gate_node(gate_b)
             .edge("work", "extra")
             .edge("extra", "review_gate")
+            .build()
+        )
+        runner_b = _make_runner(graph_b, audit, store)
+
+        with pytest.raises(GraphVersionMismatchError):
+            await runner_b.resume(paused.checkpoint_id, "approved")
+
+
+@pytest.mark.asyncio
+async def test_resume_with_swapped_handler_raises_version_mismatch(tmp_path: Path) -> None:
+    """If a node handler is swapped to a different named function between pause
+    and resume, the graph hash changes and resume is refused.
+
+    This protects decision 18: the signal a human gave through a gate carried
+    the meaning of the routing-at-the-time, including what executes at each node.
+    Topology (node names, edges, gate routing) being identical is not sufficient
+    — the handlers must also match.
+    """
+    gate_a = _gate()
+    graph_a = (
+        GraphBuilder(entry="work")
+        .node("work", handler=noop)  # <-- noop
+        .node("done", handler=noop)
+        .node("refuse", handler=noop)
+        .gate_node(gate_a)
+        .edge("work", "review_gate")
+        .build()
+    )
+    state = RunState()
+    store = CheckpointStore.at(tmp_path / "cp")
+    with AuditLog.open(state.run_id, dir=tmp_path) as audit:
+        runner_a = _make_runner(graph_a, audit, store)
+        paused = await runner_a.run(state)
+        assert isinstance(paused, PausedOutcome)
+
+        gate_b = SimpleGate(
+            name="review_gate",
+            signals=("approved", "rejected"),
+            routing={"approved": "done", "rejected": "refuse"},
+        )
+        graph_b = (
+            GraphBuilder(entry="work")
+            .node("work", handler=noop_alt)  # <-- different handler, same topology
+            .node("done", handler=noop)
+            .node("refuse", handler=noop)
+            .gate_node(gate_b)
+            .edge("work", "review_gate")
             .build()
         )
         runner_b = _make_runner(graph_b, audit, store)

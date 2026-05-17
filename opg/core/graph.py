@@ -238,13 +238,19 @@ class Graph:
         the hash at pause time; resume validates the current graph still matches.
         Cosmetic fields (edge labels, node docstrings) are excluded.
 
-        Guard functions are identified by module.qualname (best-effort; prefer
-        named functions over lambdas for stable hashes).
+        Node handler identity is included via module.qualname (best-effort).
+        Guard functions use the same strategy. Builders must use module-level
+        named functions — not lambdas or closures — for stable hashes across
+        Python invocations. A lambda hashes as '<lambda>' and a closure's
+        qualname includes the enclosing function, which may not be stable.
         """
         structure: dict[str, Any] = {
             "entry": self.entry,
             "nodes": sorted(
-                [{"name": n.name, "kind": n.kind} for n in self.nodes.values()],
+                [
+                    {"name": n.name, "kind": n.kind, "handler": _guard_id(n.handler)}
+                    for n in self.nodes.values()
+                ],
                 key=lambda x: x["name"],
             ),
             "edges": sorted(

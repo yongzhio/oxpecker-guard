@@ -107,19 +107,38 @@ The demo demonstrates the **guard primitive**, not the full workflow.
 
 ## Verifying the guard
 
-To see a rejection, run the demo with the sample filing — the model is likely
-to reproduce the protected name. When it does, the run is rejected and the
-summary is suppressed:
+**Positive — real model, guard passes:**
 
-```
-Result:       REJECTED by guard 'name_list_filter'
-Reason:       output contains protected name 'John Doe'
+```bash
+python -m examples.ex06_name_protection.run_demo
 ```
 
-To see a passing run, provide a filing with no mention of any listed name, or
-provide an empty names file.
+The model summarises the filing. If the summary avoids every listed name
+variant the guard passes and the summary is printed.
+Output: `completed at 'done' — summary is clean`.
 
-To inspect the raw model output after a rejection, read the audit log:
+**Negative — name list filter (stub, guaranteed rejection):**
+
+```bash
+python -m examples.ex06_name_protection.run_demo \
+    --stub "The plaintiff John Doe filed a complaint alleging negligence."
+```
+
+The stub injects a summary containing `John Doe`. No model call is made.
+The guard rejects deterministically.
+Expected output: `REJECTED by guard 'name_list_filter'` with the matched name shown.
+
+**Negative — paraphrase only (stub, guard passes):**
+
+```bash
+python -m examples.ex06_name_protection.run_demo \
+    --stub "The plaintiff filed a complaint alleging negligence."
+```
+
+The stub avoids every listed name variant. The guard passes.
+Expected output: `completed at 'done' — summary is clean`.
+
+To inspect the raw model output after a real-model rejection, read the audit log:
 
 ```bash
 cat runs/ex06/audit/<run_id>.jsonl | python3 -m json.tool --no-ensure-ascii

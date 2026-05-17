@@ -17,14 +17,17 @@ See `example_session.txt` for captured output from real runs of this demo.
 ## Prerequisites
 
 - Python 3.10 or 3.11+
-- [Ollama](https://ollama.com) running locally with at least one model pulled
+- [Ollama](https://ollama.com) running locally with the model tag created
 - The repo installed in editable mode: `pip install -e ".[dev]"` from the repo root
 
-Pull a compatible model (the default config uses `qwen3.5:9b`):
+Pull the base model and create the tagged variant (one-time setup):
 
 ```
 ollama pull qwen3.5:9b
+ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
 ```
+
+See `examples/README.md` for the rationale.
 
 ---
 
@@ -52,7 +55,7 @@ Edit `examples/ex04a_tool_allowlist/config.toml` to change model, limits, or the
 ```toml
 [model]
 base_url = "http://localhost:11434/v1"   # Ollama default
-model_name = "qwen3.5:9b"
+model_name = "qwen3.5:9b-65k"
 temperature = 0.1
 timeout_seconds = 120.0
 

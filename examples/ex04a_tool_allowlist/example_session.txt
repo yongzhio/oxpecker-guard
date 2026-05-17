@@ -1,3 +1,7 @@
+Note: these sessions were captured against qwen3.5:9b (before B2 standardized
+on qwen3.5:9b-65k). The guard behavior is identical; only the model tag in the
+header lines differs. New runs will show qwen3.5:9b-65k @ http://localhost:11434/v1.
+
 ===================================================================
 SESSION 1: High-risk tool call, operator approves
 Command: python -m examples.ex04a_tool_allowlist.run_demo "write hello world to /tmp/test.txt"

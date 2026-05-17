@@ -1,0 +1,19 @@
+# Example 1 — operator configuration
+#
+# Targets Ollama's OpenAI-compatible endpoint by default.
+# Override any field by editing this file or passing a different path:
+#   python -m examples.ex01_schema_validation.run_demo --config /path/to/config.toml
+
+[model]
+base_url = "http://localhost:11434/v1"
+model_name = "qwen3.5:9b"
+temperature = 0.0
+timeout_seconds = 120.0
+# api_key = ""  # Most local servers do not require one.
+
+[limits]
+max_iterations = 10
+max_model_calls = 3
+
+[storage]
+checkpoint_dir = "runs/ex01"

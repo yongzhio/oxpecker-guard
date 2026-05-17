@@ -24,12 +24,9 @@ Graph topology:
 
 Usage with a real model client:
 
-    async def my_call_model(state: RunState) -> None:
-        response = await client.complete(state.messages)
-        state.append_message(response)
-        state.counters.model_calls += 1
-
-    graph = build_graph(call_model_handler=my_call_model)
+    async with ModelClient(cfg) as client:
+        handler = make_call_model_handler(client, EX04A_TOOLS)
+        graph = build_graph(call_model_handler=handler)
 
 Usage in tests (inject a stub that returns a specific tool call):
 
@@ -41,6 +38,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from examples.ex04a_tool_allowlist.handlers import (
+    _last_tool_call,
+    classify_blast_radius,
+    dispatch_approved,
+    dispatch_direct,
+    done,
+    make_model_stub,
+    receive_request,
+    refuse,
+)
+from examples.ex04a_tool_allowlist.tools import ALLOWED_TOOLS, HIGH_BLAST_RADIUS_TOOLS
 from opg.core.graph import (
     GateNode,
     Graph,
@@ -50,29 +58,17 @@ from opg.core.graph import (
     GuardReject,
     GuardVerdict,
 )
-from opg.core.state import Message, RunState, ToolCall, ToolResult
+from opg.core.state import RunState, ToolCall
 
-# ---------------------------------------------------------------------------
-# Tool catalog — operator-defined at build time
-# ---------------------------------------------------------------------------
-
-ALLOWED_TOOLS: frozenset[str] = frozenset(
-    {
-        "read_file",
-        "list_directory",
-        "write_file",
-        "send_email",
-        "delete_file",
-    }
-)
-
-HIGH_BLAST_RADIUS_TOOLS: frozenset[str] = frozenset(
-    {
-        "write_file",
-        "send_email",
-        "delete_file",
-    }
-)
+# Re-export for test compatibility — tests import these from graph.py.
+__all__ = [
+    "ALLOWED_TOOLS",
+    "HIGH_BLAST_RADIUS_TOOLS",
+    "ApprovalGate",
+    "build_graph",
+    "make_model_stub",
+    "tool_allowlist_guard",
+]
 
 # ---------------------------------------------------------------------------
 # Guard
@@ -130,7 +126,7 @@ class ApprovalGate(GateNode):
         # comparison section). The orchestrator validates the return value against
         # self.signals and raises on mismatch; we enforce the same discipline at
         # the elicitation layer to keep the structural property visible to readers.
-        tool = _last_tool_call(state)
+        tool: ToolCall | None = _last_tool_call(state)
         tool_name = tool.name if tool is not None else "(unknown)"
         print(
             f"\nTool call: {tool_name!r} — high blast-radius.\n"
@@ -141,63 +137,6 @@ class ApprovalGate(GateNode):
             if ans in self.signals:
                 return ans
             print(f"Invalid input {ans!r}. Must be one of: {', '.join(self.signals)}.")
-
-
-# ---------------------------------------------------------------------------
-# Node handlers
-# ---------------------------------------------------------------------------
-
-
-async def receive_request(state: RunState) -> None:
-    """Entry node. The user's request is already in state.messages."""
-
-
-async def classify_blast_radius(state: RunState) -> str:
-    """Route high-risk tools to the approval gate; low-risk tools to direct dispatch."""
-    tool = _last_tool_call(state)
-    if tool is not None and tool.name in HIGH_BLAST_RADIUS_TOOLS:
-        return "approval_gate"
-    return "dispatch_direct"
-
-
-async def dispatch_direct(state: RunState) -> None:
-    """Execute a low-risk tool call without human approval."""
-    tool = _last_tool_call(state)
-    if tool is not None:
-        state.append_message(
-            Message(
-                role="tool",
-                tool_result=ToolResult(
-                    tool_call_id=tool.id,
-                    content=f"[direct] {tool.name} completed",
-                ),
-            )
-        )
-        state.counters.tool_calls += 1
-
-
-async def dispatch_approved(state: RunState) -> None:
-    """Execute a high-risk tool call after operator approval."""
-    tool = _last_tool_call(state)
-    if tool is not None:
-        state.append_message(
-            Message(
-                role="tool",
-                tool_result=ToolResult(
-                    tool_call_id=tool.id,
-                    content=f"[approved] {tool.name} completed",
-                ),
-            )
-        )
-        state.counters.tool_calls += 1
-
-
-async def refuse(state: RunState) -> None:
-    """Terminal: operator rejected the tool dispatch."""
-
-
-async def done(state: RunState) -> None:
-    """Terminal: flow completed normally."""
 
 
 # ---------------------------------------------------------------------------
@@ -236,37 +175,3 @@ def build_graph(call_model_handler: Any) -> Graph:
         .guard_after("call_model", tool_allowlist_guard())
         .build()
     )
-
-
-def make_model_stub(tool_name: str, arguments: dict[str, Any] | None = None) -> Any:
-    """Return a NodeHandler stub that injects a canned tool call into state.
-
-    Use this in tests and demos that don't have a real model available.
-
-        stub = make_model_stub("read_file", {"path": "/etc/hosts"})
-        graph = build_graph(call_model_handler=stub)
-    """
-
-    async def _stub(state: RunState) -> None:
-        state.append_message(
-            Message(
-                role="assistant",
-                tool_calls=[ToolCall(id="tc-stub-001", name=tool_name, arguments=arguments or {})],
-            )
-        )
-        state.counters.model_calls += 1
-
-    return _stub
-
-
-# ---------------------------------------------------------------------------
-# Internal helper
-# ---------------------------------------------------------------------------
-
-
-def _last_tool_call(state: RunState) -> ToolCall | None:
-    """Return the most recent tool call from an assistant message, or None."""
-    for msg in reversed(state.messages):
-        if msg.role == "assistant" and msg.tool_calls:
-            return msg.tool_calls[0]
-    return None

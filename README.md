@@ -211,6 +211,41 @@ Must-be-trues (MBTs) are properties this repo aims to satisfy at v1 and not viol
 
 ---
 
+## Tests vs. demos
+
+Each example in `examples/` has two complementary entry points:
+
+1. **The test suite** in `tests/examples/test_exNN_*.py` exercises every
+   guard rejection path and every structural transition the example
+   demonstrates. The tests use stubbed model outputs to make every
+   failure-mode reachable deterministically. Run `make check` from the
+   repo root; all paths are exercised in seconds, without requiring
+   a local LLM.
+
+   This is the canonical demonstration. Reading the test cases shows
+   what each guard catches and what it doesn't. The structural property
+   OPG claims — that the guards' determinism is independent of model
+   behavior — is testable precisely because the tests bracket out the
+   probabilistic LLM.
+
+2. **The `run_demo.py` script** in each example directory exercises the
+   same patterns against a real LLM via Ollama. This is the illustrative
+   demonstration — useful for seeing the demos in motion, observing
+   real model behavior interacting with the guards, and experiencing
+   the operator-facing flow (e.g. the HITL approval prompt in ex04a).
+
+   The CLI demos require a 16 GiB GPU running Qwen3 9B locally via
+   Ollama. Readers without these resources can still verify the
+   patterns work via the test suite, and can read the captured
+   transcript files (see `example_session.txt` in each demo directory)
+   to see what the demos look like in motion.
+
+The architectural commitment is that the guards are deterministic
+functions of state. The tests demonstrate this directly; the CLI demos
+demonstrate it as it would manifest in operation.
+
+---
+
 ## Examples planned for v1
 
 Each demo is structured around four questions: where does it fit in the architecture, what fails, what the deterministic guard does, what the deterministic guard does not address (and what the operator's workflow handles instead).

@@ -217,6 +217,11 @@ class GraphRunner:
             {"checkpoint_id": str(checkpoint_id), "signal": signal},
         )
 
+        # Evaluate the gate's after slot for post-signal work (decision 4).
+        rejection = self._run_slot(checkpoint.state, checkpoint.paused_at_node, "after")
+        if rejection is not None:
+            return rejection
+
         next_node = gate.routing[signal]
         return await self._run_from(checkpoint.state, next_node)
 
@@ -255,6 +260,7 @@ class GraphRunner:
             {
                 "checkpoint_id": str(checkpoint_id),
                 "reason": reason,
+                "abandoned_at": abandoned.abandoned_at.isoformat() if abandoned.abandoned_at else None,
                 "abandoned_by": abandoned_by,
             },
         )
@@ -350,14 +356,22 @@ class GraphRunner:
             )
 
         gate = self._graph.gate_nodes[gate_name]
-        self._audit.emit("gate_enter", {"gate": gate_name, "signals": list(gate.signals)})
 
+        # Create the checkpoint first so its ID is available for the gate_enter payload.
         checkpoint = Checkpoint(
             run_id=state.run_id,
             paused_at_node=gate_name,
             gate_signals=gate.signals,
             graph_hash=self._graph.compute_hash(),
             state=state,
+        )
+        self._audit.emit(
+            "gate_enter",
+            {
+                "gate": gate_name,
+                "signals": list(gate.signals),
+                "checkpoint_id": str(checkpoint.checkpoint_id),
+            },
         )
         self._checkpoint_store.save(checkpoint)
         self._audit.emit(

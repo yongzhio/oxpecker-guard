@@ -378,6 +378,95 @@ async def test_gate_enter_event_emitted_on_pause(tmp_path: Path) -> None:
     assert gate_enters[0].payload["gate"] == "review_gate"
     assert "approved" in gate_enters[0].payload["signals"]
     assert "rejected" in gate_enters[0].payload["signals"]
+    # checkpoint_id must be present so audit consumers can correlate the event
+    assert "checkpoint_id" in gate_enters[0].payload
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_abandoned_payload_contains_abandoned_at(tmp_path: Path) -> None:
+    """The checkpoint_abandoned audit event payload includes abandoned_at."""
+    gate = _gate()
+    graph = _build_graph(gate)
+    state = RunState()
+    store = CheckpointStore.at(tmp_path / "cp")
+    with AuditLog.open(state.run_id, dir=tmp_path) as audit:
+        runner = _make_runner(graph, audit, store)
+        paused = await runner.run(state)
+        assert isinstance(paused, PausedOutcome)
+        runner.abandon_checkpoint(paused.checkpoint_id, reason="timed out", abandoned_by="scheduler")
+
+    events = read_log(tmp_path / f"{state.run_id}.jsonl")
+    abandoned_events = [e for e in events if e.event_type == "checkpoint_abandoned"]
+    assert len(abandoned_events) == 1
+    payload = abandoned_events[0].payload
+    assert payload["reason"] == "timed out"
+    assert payload["abandoned_by"] == "scheduler"
+    assert "abandoned_at" in payload
+    assert payload["abandoned_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_gate_node_after_slot_runs_on_resume(tmp_path: Path) -> None:
+    """An after slot declared on a gate node fires during resume() as post-signal work."""
+    visited: list[str] = []
+
+    def gate_after_guard(state: RunState) -> GuardVerdict:
+        visited.append("gate_after")
+        return GuardPass(guard_name="gate_after_guard")
+
+    gate = _gate()
+    graph = (
+        GraphBuilder(entry="work")
+        .node("work", handler=noop)
+        .node("done", handler=noop)
+        .node("refuse", handler=noop)
+        .gate_node(gate)
+        .edge("work", "review_gate")
+        .guard_after("review_gate", gate_after_guard)
+        .build()
+    )
+    state = RunState()
+    store = CheckpointStore.at(tmp_path / "cp")
+    with AuditLog.open(state.run_id, dir=tmp_path) as audit:
+        runner = _make_runner(graph, audit, store)
+        paused = await runner.run(state)
+        assert isinstance(paused, PausedOutcome)
+        outcome = await runner.resume(paused.checkpoint_id, "approved")
+
+    assert isinstance(outcome, CompletedOutcome)
+    assert outcome.final_node == "done"
+    assert visited == ["gate_after"]
+
+
+@pytest.mark.asyncio
+async def test_gate_node_after_slot_rejection_halts_resume(tmp_path: Path) -> None:
+    """A rejecting after slot on a gate node halts the run during resume()."""
+
+    def blocking_guard(state: RunState) -> GuardVerdict:
+        return GuardReject(guard_name="post_signal_block", reason="blocked after signal")
+
+    gate = _gate()
+    graph = (
+        GraphBuilder(entry="work")
+        .node("work", handler=noop)
+        .node("done", handler=noop)
+        .node("refuse", handler=noop)
+        .gate_node(gate)
+        .edge("work", "review_gate")
+        .guard_after("review_gate", blocking_guard)
+        .build()
+    )
+    state = RunState()
+    store = CheckpointStore.at(tmp_path / "cp")
+    with AuditLog.open(state.run_id, dir=tmp_path) as audit:
+        runner = _make_runner(graph, audit, store)
+        paused = await runner.run(state)
+        assert isinstance(paused, PausedOutcome)
+        from opg.core.orchestrator import RejectedOutcome
+        outcome = await runner.resume(paused.checkpoint_id, "approved")
+
+    assert isinstance(outcome, RejectedOutcome)
+    assert outcome.guard_name == "post_signal_block"
 
 
 @pytest.mark.asyncio

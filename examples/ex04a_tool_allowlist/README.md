@@ -18,10 +18,10 @@ The guard and router are pure Python; neither calls the model. The gate pauses e
 - [Ollama](https://ollama.com) running locally with at least one model pulled
 - The repo installed in editable mode: `pip install -e ".[dev]"` from the repo root
 
-Pull a compatible model (the default config uses `qwen2.5:7b`):
+Pull a compatible model (the default config uses `qwen3.5:9b`):
 
 ```
-ollama pull qwen2.5:7b
+ollama pull qwen3.5:9b
 ```
 
 ---
@@ -50,7 +50,7 @@ Edit `examples/ex04a_tool_allowlist/config.toml` to change model, limits, or the
 ```toml
 [model]
 base_url = "http://localhost:11434/v1"   # Ollama default
-model_name = "qwen2.5:7b"
+model_name = "qwen3.5:9b"
 temperature = 0.1
 timeout_seconds = 120.0
 

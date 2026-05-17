@@ -41,7 +41,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from opg.core.graph import GateNode, Graph, GraphBuilder, GuardFn, GuardPass, GuardReject, GuardVerdict
+from opg.core.graph import (
+    GateNode,
+    Graph,
+    GraphBuilder,
+    GuardFn,
+    GuardPass,
+    GuardReject,
+    GuardVerdict,
+)
 from opg.core.state import Message, RunState, ToolCall, ToolResult
 
 # ---------------------------------------------------------------------------
@@ -114,17 +122,25 @@ class ApprovalGate(GateNode):
     """
 
     def elicit_signal(self, state: RunState) -> str:
+        # The orchestrator's deterministic routing depends on this function
+        # returning EXACTLY one of self.signals — no fuzzy matching, no substring
+        # matching, no normalization beyond cosmetic strip/lower. Any deviation
+        # here would reintroduce the parsing-drift failure mode that OPG's typed
+        # signal enumeration is designed to prevent (see opg_design_v1.1.md
+        # comparison section). The orchestrator validates the return value against
+        # self.signals and raises on mismatch; we enforce the same discipline at
+        # the elicitation layer to keep the structural property visible to readers.
         tool = _last_tool_call(state)
         tool_name = tool.name if tool is not None else "(unknown)"
-        ans = (
-            input(
-                f"\nTool call: {tool_name!r} — high blast-radius.\n"
-                "Approve dispatch? [approve/reject]: "
-            )
-            .strip()
-            .lower()
+        print(
+            f"\nTool call: {tool_name!r} — high blast-radius.\n"
+            f"Valid signals: {', '.join(self.signals)}"
         )
-        return "approved" if "approve" in ans else "rejected"
+        while True:
+            ans = input(f"Signal? [{'/'.join(self.signals)}]: ").strip().lower()
+            if ans in self.signals:
+                return ans
+            print(f"Invalid input {ans!r}. Must be one of: {', '.join(self.signals)}.")
 
 
 # ---------------------------------------------------------------------------

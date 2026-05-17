@@ -16,6 +16,7 @@ import pytest
 
 from examples.ex04a_tool_allowlist.graph import (
     HIGH_BLAST_RADIUS_TOOLS,
+    ApprovalGate,
     build_graph,
     make_model_stub,
 )
@@ -183,3 +184,57 @@ async def test_full_high_risk_approved_audit_trace(tmp_path: Path) -> None:
     signal_event = next(e for e in events if e.event_type == "gate_signal")
     assert signal_event.payload["signal"] == "approved"
     assert signal_event.payload["metadata"]["reviewer"] == "ops-team"
+
+
+# ---------------------------------------------------------------------------
+# elicit_signal discipline: exact-match, loops on invalid input
+# ---------------------------------------------------------------------------
+
+
+def _make_gate() -> ApprovalGate:
+    return ApprovalGate(
+        name="approval_gate",
+        signals=("approved", "rejected"),
+        routing={"approved": "dispatch_approved", "rejected": "refuse"},
+    )
+
+
+def test_elicit_signal_returns_exact_approved(monkeypatch: pytest.MonkeyPatch) -> None:
+    """elicit_signal returns 'approved' when the operator types the exact signal."""
+    monkeypatch.setattr("builtins.input", lambda _: "approved")
+    gate = _make_gate()
+    result = gate.elicit_signal(_seed_state())
+    assert result == "approved"
+
+
+def test_elicit_signal_returns_exact_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """elicit_signal returns 'rejected' when the operator types the exact signal."""
+    monkeypatch.setattr("builtins.input", lambda _: "rejected")
+    gate = _make_gate()
+    result = gate.elicit_signal(_seed_state())
+    assert result == "rejected"
+
+
+def test_elicit_signal_accepts_case_variant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """elicit_signal's cosmetic lower() accepts 'Approved' and 'REJECTED'."""
+    inputs = iter(["Approved"])
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+    gate = _make_gate()
+    result = gate.elicit_signal(_seed_state())
+    assert result == "approved"
+
+
+def test_elicit_signal_loops_on_invalid_then_accepts_valid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """elicit_signal loops on invalid input and eventually returns a valid signal.
+
+    This verifies the key difference from the old substring-matching implementation:
+    'approve' is NOT accepted; only 'approved' is. The operator is re-prompted until
+    they provide an exact match from the declared signal enumeration.
+    """
+    inputs = iter(["approve", "yes", "rejected"])
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+    gate = _make_gate()
+    result = gate.elicit_signal(_seed_state())
+    assert result == "rejected"

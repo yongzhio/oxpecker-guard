@@ -441,7 +441,7 @@ What makes OPG distinct is not any individual mechanism — allowlists, signal e
 
 ### Audit log
 
-JSON Lines, one file per run, named `<run_id>.jsonl`. Each line is a single self-contained JSON object with a versioned schema. The log is the substrate for measurement and for auditability: a run can be reconstructed from the log alone.
+JSON Lines, one file per run. The path is `<runs_dir>/audit/<run_id>.jsonl` where `<runs_dir>` is configured per-demo (default `runs/exNN`). Each line is a single self-contained JSON object with a versioned schema. The log is the substrate for measurement and for auditability: a run can be reconstructed from the log alone.
 
 The `state.messages` list is a second independently auditable artifact. It records the conversation the agent actually saw — including any rewriting or filtering that a handler performed before the next model call. The audit log records what the orchestrator decided; `state.messages` records what the agent saw at each step. Together they give the complete forensic record. The checkpoint serializes both, so the messages at every pause point are preserved alongside the orchestration event stream.
 

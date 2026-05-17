@@ -10,6 +10,8 @@ Demonstrates three deterministic guard layers applied to a model's structured ou
 
 Guards run in this order in the `after` slot of `call_model`. The first rejection halts the run; later guards do not execute. This is the layered-guard pattern: each guard does one thing, with one honest scope.
 
+See `example_session.txt` for captured output from real runs of this demo.
+
 ---
 
 ## Prerequisites

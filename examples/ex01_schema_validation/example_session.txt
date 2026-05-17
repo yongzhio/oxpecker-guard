@@ -1,0 +1,80 @@
+===================================================================
+SESSION 1: Positive — all guards pass (live model)
+Command: python -m examples.ex01_schema_validation.run_demo "Recommend a wireless mouse"
+===================================================================
+
+node 'done' has no outgoing edges; run will complete there
+run_id: 45d0b62c-d70d-4ccb-9a65-f5b9f561a80e
+model:  qwen3.5:9b-65k @ http://localhost:11434/v1
+prompt: 'Recommend a wireless mouse'
+
+
+=== Run summary ===
+Result:       completed at 'done'
+Model calls:  1
+Tokens in:    310  out: 657
+
+Model output:
+{"product_id": "SKU-1001", "name": "Wireless mouse", "category": "peripherals", "price_usd": 24.99, "in_stock": true}
+
+
+===================================================================
+SESSION 2: Negative — grounding guard (live model, --no-catalog)
+Command: python -m examples.ex01_schema_validation.run_demo --no-catalog "Recommend a wireless mouse"
+===================================================================
+
+Without the catalog in the system prompt the model invents a product ID not
+in the operator catalog. The grounding guard catches the hallucination.
+
+node 'done' has no outgoing edges; run will complete there
+run_id: fdb83ef8-03b3-4c00-8288-7a77cbc96fb4
+model:  qwen3.5:9b-65k @ http://localhost:11434/v1
+mode:   no-catalog (grounding demo)
+prompt: 'Recommend a wireless mouse'
+
+
+=== Run summary ===
+Result:       rejected by guard 'grounding'
+At node:      call_model (after)
+Reason:       product_id 'SKU-2045' not in operator catalog (model hallucination)
+
+
+===================================================================
+SESSION 3: Negative — schema guard (stub)
+Command: python -m examples.ex01_schema_validation.run_demo --stub "not json at all"
+===================================================================
+
+The stub injects plain text. The schema guard rejects before the semantic
+or grounding guards run.
+
+node 'done' has no outgoing edges; run will complete there
+run_id: efa014ae-d8e7-462b-8e4e-33e88b2ba2ca
+mode:   stub
+stub:   'not json at all'
+
+
+=== Run summary ===
+Result:       rejected by guard 'schema_validation'
+At node:      call_model (after)
+Reason:       output is not valid JSON: Expecting value
+
+
+===================================================================
+SESSION 4: Negative — semantic guard (stub, negative price)
+Command: python -m examples.ex01_schema_validation.run_demo --stub '{"product_id":"SKU-1001","name":"Wireless mouse","category":"peripherals","price_usd":-10.00,"in_stock":true}'
+===================================================================
+
+The stub injects valid JSON with a negative price. The schema guard passes
+(valid JSON, correct fields and types); the semantic guard rejects on the
+out-of-range price.
+
+node 'done' has no outgoing edges; run will complete there
+run_id: 6ac4f151-bcae-4b34-aaf4-bab64526f7ad
+mode:   stub
+stub:   '{"product_id":"SKU-1001","name":"Wireless mouse","category":"peripherals","price_usd":-10.00,"in_stock":true}'
+
+
+=== Run summary ===
+Result:       rejected by guard 'semantic_constraints'
+At node:      call_model (after)
+Reason:       price_usd -10.0 out of range (0, 100000)

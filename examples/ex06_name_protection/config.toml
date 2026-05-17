@@ -4,7 +4,7 @@
 base_url = "http://localhost:11434/v1"
 model_name = "qwen3.5:9b-65k"
 temperature = 0.0
-timeout_seconds = 60.0  # ample headroom with /no_think; raise if switching to a thinking model
+timeout_seconds = 300.0  # summarization output is longer than JSON; raise if switching to a thinking model
 # api_key = ""
 
 [limits]

@@ -10,6 +10,8 @@ Demonstrates three deterministic containment layers applied to model-proposed to
 
 The guard and router are pure Python; neither calls the model. The gate pauses execution and writes a checkpoint to disk. The operator delivers a signal (`approved` or `rejected`) before the run continues.
 
+See `example_session.txt` for captured output from real runs of this demo.
+
 ---
 
 ## Prerequisites

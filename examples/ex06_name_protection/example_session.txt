@@ -1,0 +1,75 @@
+===================================================================
+SESSION 1: Negative — real model reproduces protected name (live model)
+Command: python -m examples.ex06_name_protection.run_demo
+===================================================================
+
+The model was given the case filing and asked to summarise it. It reproduced
+"John Doe Jr." in the summary. The guard caught the match and suppressed
+the output before it could surface to the researcher.
+
+node 'done' has no outgoing edges; run will complete there
+run_id:          89dfee83-63e7-43a8-9f91-351196da55c7
+model:           qwen3.5:9b-65k @ http://localhost:11434/v1
+filing:          examples/ex06_name_protection/data/case_filing.txt
+protected names: 25 variants from examples/ex06_name_protection/data/protected_names.txt
+
+
+=== Run summary ===
+Result:       REJECTED by guard 'name_list_filter'
+At node:      call_model (after)
+Reason:       output contains protected name 'John Doe Jr.'
+
+The summary was suppressed. Review the audit log for the full model output.
+
+
+===================================================================
+SESSION 2: Negative — name list filter (stub, guaranteed rejection)
+Command: python -m examples.ex06_name_protection.run_demo \
+    --stub "The plaintiff John Doe filed a complaint alleging negligence."
+===================================================================
+
+The stub injects a summary containing "John Doe", which is on the protected
+names list. No model call is made. The guard rejects deterministically.
+
+node 'done' has no outgoing edges; run will complete there
+run_id:          0e436b1d-a3c7-48cd-b92e-f22549ebc35c
+mode:            stub
+stub:            'The plaintiff John Doe filed a complaint alleging negligence.'
+protected names: 25 variants from examples/ex06_name_protection/data/protected_names.txt
+
+
+=== Run summary ===
+Result:       REJECTED by guard 'name_list_filter'
+At node:      call_model (after)
+Reason:       output contains protected name 'John Doe'
+
+The summary was suppressed. Review the audit log for the full model output.
+
+
+===================================================================
+SESSION 3: Positive — paraphrase only, guard passes (stub)
+Command: python -m examples.ex06_name_protection.run_demo \
+    --stub "The plaintiff filed a complaint alleging negligence by the school district."
+===================================================================
+
+The stub injects a summary that avoids every listed name variant. The guard
+passes and the summary surfaces to the operator for review.
+
+This demonstrates the honest limit: the guard catches every literal string
+on the list, but paraphrases ("the plaintiff", "the minor") pass through.
+Maintaining an exhaustive list is the operator's responsibility.
+
+node 'done' has no outgoing edges; run will complete there
+run_id:          d6730ffa-3e47-43bd-a782-349820f055e5
+mode:            stub
+stub:            'The plaintiff filed a complaint alleging negligence by the school district.'
+protected names: 25 variants from examples/ex06_name_protection/data/protected_names.txt
+
+
+=== Run summary ===
+Result:       completed at 'done' — summary is clean
+Model calls:  1
+Tokens in:    0  out: 0
+
+Summary:
+The plaintiff filed a complaint alleging negligence by the school district.

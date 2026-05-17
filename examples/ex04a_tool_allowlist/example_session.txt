@@ -1,0 +1,84 @@
+===================================================================
+SESSION 1: High-risk tool call, operator approves
+Command: python -m examples.ex04a_tool_allowlist.run_demo "write hello world to /tmp/test.txt"
+Operator input at gate: approved
+===================================================================
+
+The model calls write_file, which is classified as high blast-radius. The
+allowlist guard passes (write_file is permitted). The run pauses at the
+approval gate. The operator types "approved". The run resumes and completes
+at 'done'.
+
+node 'refuse' has no outgoing edges; run will complete there
+node 'done' has no outgoing edges; run will complete there
+run_id: ae1ba339-1676-412c-ba63-3bdc6e96f5a6
+model:  qwen3.5:9b @ http://localhost:11434/v1
+prompt: 'write hello world to /tmp/test.txt'
+
+
+--- Paused at gate 'approval_gate' (checkpoint 9f4fb8a9-6630-4187-a3ba-172a5df125ea) ---
+
+Tool call: 'write_file' — high blast-radius.
+Valid signals: approved, rejected
+Signal? [approved/rejected]: Resuming with signal: 'approved'
+
+
+=== Run summary ===
+Result:       completed at 'done'
+Model calls:  1
+Tool calls:   1
+Tokens in:    673  out: 83
+
+
+===================================================================
+SESSION 2: High-risk tool call, operator rejects
+Command: python -m examples.ex04a_tool_allowlist.run_demo "write hello world to /tmp/test.txt"
+Operator input at gate: rejected
+===================================================================
+
+Same request as session 1. The run pauses at the approval gate. The operator
+types "rejected". The run routes to the 'refuse' terminal instead of 'done'.
+No tool call is dispatched.
+
+node 'refuse' has no outgoing edges; run will complete there
+node 'done' has no outgoing edges; run will complete there
+run_id: c4c538da-fe40-4254-865b-16d8ad354bb0
+model:  qwen3.5:9b @ http://localhost:11434/v1
+prompt: 'write hello world to /tmp/test.txt'
+
+
+--- Paused at gate 'approval_gate' (checkpoint 9fc02fe8-67d9-441d-b6b2-778aa11112e5) ---
+
+Tool call: 'write_file' — high blast-radius.
+Valid signals: approved, rejected
+Signal? [approved/rejected]: Resuming with signal: 'rejected'
+
+
+=== Run summary ===
+Result:       completed at 'refuse'
+Model calls:  1
+Tool calls:   0
+Tokens in:    673  out: 91
+
+
+===================================================================
+SESSION 3: Low-risk tool call, no gate
+Command: python -m examples.ex04a_tool_allowlist.run_demo "list files in /tmp"
+===================================================================
+
+The model calls list_files, which is classified as low blast-radius. The
+allowlist guard passes. No gate fires. The run completes at 'done' without
+operator intervention.
+
+node 'refuse' has no outgoing edges; run will complete there
+node 'done' has no outgoing edges; run will complete there
+run_id: 642dc7ff-5eea-4d46-8147-6184492fb63a
+model:  qwen3.5:9b @ http://localhost:11434/v1
+prompt: 'list files in /tmp'
+
+
+=== Run summary ===
+Result:       completed at 'done'
+Model calls:  1
+Tool calls:   1
+Tokens in:    670  out: 53

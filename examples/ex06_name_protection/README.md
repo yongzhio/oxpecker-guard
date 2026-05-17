@@ -19,6 +19,8 @@ The guard catches every literal string on the operator-supplied list. If the
 model's output contains any of those strings (case-insensitive), the run is
 rejected before the summary surfaces.
 
+See `example_session.txt` for captured output from real runs of this demo.
+
 ---
 
 ## Prerequisites
@@ -168,9 +170,9 @@ ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
 The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
 model weights — total ~12 GiB, within a 16 GiB GPU.
 
-**Timeout:** With thinking disabled via `/no_think`, the model responds in
-seconds. The default `timeout_seconds = 60.0` provides ample headroom. Raise it
-if you switch to a model without a fast-response mode.
+**Timeout:** With thinking disabled via `/no_think`, summarization tasks
+complete within a few minutes. The default is `timeout_seconds = 300.0`.
+Raise it if you switch to a model without a fast-response mode.
 
 If you supply a longer custom filing via `--filing`, the prompt token count
 rises but 65536 tokens provides ample headroom for any reasonable filing length.

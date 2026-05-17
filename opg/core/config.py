@@ -1,4 +1,4 @@
-"""Operator configuration — policy parameters loaded from YAML.
+"""Operator configuration — policy parameters loaded from TOML.
 
 The operator config is one of two configuration inputs (the other is the demo's
 graph spec, expressed in code). It carries deployment-level policy: rate limits,
@@ -14,10 +14,15 @@ stable as new demos add new policy needs.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -70,9 +75,9 @@ class OperatorConfig(BaseModel):
 
 
 def load_config(path: Path) -> OperatorConfig:
-    """Load and validate operator config from a YAML file."""
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
+    """Load and validate operator config from a TOML file."""
+    with path.open("rb") as fh:
+        data = tomllib.load(fh)
     if not isinstance(data, dict):
         raise ValueError(f"operator config at {path} must be a mapping at the top level")
     return OperatorConfig.model_validate(data)

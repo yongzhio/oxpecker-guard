@@ -1,4 +1,4 @@
-"""Operator config: defaults and YAML loading."""
+"""Operator config: defaults and TOML loading."""
 
 from __future__ import annotations
 
@@ -13,19 +13,20 @@ def test_config_defaults_construct() -> None:
     assert cfg.limits.max_iterations == 20
 
 
-def test_load_config_from_yaml(tmp_path: Path) -> None:
-    p = tmp_path / "operator_config.yaml"
+def test_load_config_from_toml(tmp_path: Path) -> None:
+    p = tmp_path / "operator_config.toml"
     p.write_text(
         """
-model:
-  base_url: "http://desktop:1234/v1"
-  model_name: "qwen2.5-coder:32b"
-  temperature: 0.2
-limits:
-  max_iterations: 50
-extras:
-  demo_specific:
-    foo: "bar"
+[model]
+base_url = "http://desktop:1234/v1"
+model_name = "qwen2.5-coder:32b"
+temperature = 0.2
+
+[limits]
+max_iterations = 50
+
+[extras.demo_specific]
+foo = "bar"
 """,
         encoding="utf-8",
     )

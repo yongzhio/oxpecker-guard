@@ -251,9 +251,7 @@ def make_model_stub(tool_name: str, arguments: dict[str, Any] | None = None) -> 
         state.append_message(
             Message(
                 role="assistant",
-                tool_calls=[
-                    ToolCall(id="tc-stub-001", name=tool_name, arguments=arguments or {})
-                ],
+                tool_calls=[ToolCall(id="tc-stub-001", name=tool_name, arguments=arguments or {})],
             )
         )
         state.counters.model_calls += 1

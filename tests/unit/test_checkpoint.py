@@ -38,7 +38,6 @@ def test_checkpoint_roundtrip(tmp_path: Path) -> None:
         gate_signals=("approved", "rejected"),
         graph_hash="deadbeef",
         state=state,
-        note="ready for review",
     )
     path = store.save(cp)
     assert path.exists()

@@ -59,3 +59,6 @@ benchmarks/results/*.json
 # Local model config (machine-specific)
 .env
 .env.local
+
+# Local session notes and reconnaissance (not for public repo)
+.local/

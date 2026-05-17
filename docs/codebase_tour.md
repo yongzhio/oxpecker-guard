@@ -692,7 +692,6 @@ class Checkpoint(BaseModel):
     abandoned_at: datetime | None = None
     abandoned_reason: str | None = None
     state: RunState
-    note: str = ""
 ```
 
 State machine: `pending → consumed` (resumed) or `pending → abandoned` (explicitly sealed). Once consumed or abandoned, the checkpoint cannot be resumed — attempts raise `CheckpointConsumedError` or `CheckpointAbandonedError`. The file is never deleted; it's preserved with the terminal status for audit.

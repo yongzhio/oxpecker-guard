@@ -80,8 +80,6 @@ class Checkpoint(BaseModel):
     abandoned_reason: str | None = None
 
     state: RunState
-    note: str = ""
-    """Human-readable context for the pause; surfaced to the reviewer."""
 
 
 class CheckpointStore:

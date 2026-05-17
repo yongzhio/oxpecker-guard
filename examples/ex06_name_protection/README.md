@@ -149,9 +149,9 @@ ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
 The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
 model weights — total ~12 GiB, within a 16 GiB GPU.
 
-**Timeout:** Qwen3's thinking chain for a summarization task can take several
-minutes. The default `timeout_seconds = 600.0` (10 minutes) in `config.toml`
-covers this. Do not reduce it below 300 seconds.
+**Timeout:** With thinking disabled via `/no_think`, the model responds in
+seconds. The default `timeout_seconds = 60.0` provides ample headroom. Raise it
+if you switch to a model without a fast-response mode.
 
 If you supply a longer custom filing via `--filing`, the prompt token count
 rises but 65536 tokens provides ample headroom for any reasonable filing length.

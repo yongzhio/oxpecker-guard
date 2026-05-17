@@ -154,7 +154,8 @@ The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
 model weights — total ~12 GiB, within a 16 GiB GPU.
 
 **Timeout:** With thinking disabled the model responds in seconds. The default
-`timeout_seconds = 600.0` provides ample headroom.
+`timeout_seconds = 60.0` provides ample headroom. Raise it if you switch to a
+model without a fast-response mode.
 
 ---
 

@@ -2,7 +2,7 @@
 
 *A pedagogical gallery of worked examples mapping LLM application failure modes to deterministic containment patterns, with honest limits.*
 
-**Status: Under construction.** v0 ships the orchestrator core foundations only. Demos begin in v0.1. v1 is the first complete public release.
+**Status: v0.1 (internal release).** Ships the orchestrator core, gate-node primitive, and the first three demos (examples 1, 4a, 6). Subsequent versions add more demos; v1 is the first complete public release.
 
 For production guardrails, see [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) or [Guardrails AI](https://github.com/guardrails-ai/guardrails). This repo is not in competition with them; it's a pedagogical reference for understanding what guardrails do, where they fit, and where they fail.
 
@@ -374,7 +374,7 @@ oxpecker-guard/
 ├── opg/
 │   ├── core/                # orchestrator core (graph runner, state, audit, etc.)
 │   └── guards/              # pluggable deterministic guards
-├── examples/                # one directory per demo (added in v0.1+)
+├── examples/                # examples 1, 4a, 6 in v0.1; more added in subsequent versions
 ├── benchmarks/              # measurement scripts and reference machine spec
 ├── tests/                   # unit + integration; live-model tests run locally
 └── docs/diagrams/           # SVG architecture diagrams

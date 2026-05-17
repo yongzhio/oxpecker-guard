@@ -154,12 +154,12 @@ class GuardSlot:
     """A configurable slot at which guards may be bound.
 
     Position (before/after) is implicit in which graph collection the slot
-    lives in — Graph.before_slots or Graph.after_slots. An empty slot
-    (no guards) is a pass-through. Guards run in declaration order; the
-    first rejection halts the slot's evaluation.
+    lives in — Graph.before_slots or Graph.after_slots. The node name is
+    implicit in the dict key. An empty slot (no guards) is a pass-through.
+    Guards run in declaration order; the first rejection halts the slot's
+    evaluation.
     """
 
-    node_name: str
     guards: tuple[GuardFn, ...] = ()
 
 
@@ -449,11 +449,11 @@ class GraphBuilder:
 
         # Freeze
         before_slots = {
-            name: GuardSlot(node_name=name, guards=tuple(guards))
+            name: GuardSlot(guards=tuple(guards))
             for name, guards in self._before_slots.items()
         }
         after_slots = {
-            name: GuardSlot(node_name=name, guards=tuple(guards))
+            name: GuardSlot(guards=tuple(guards))
             for name, guards in self._after_slots.items()
         }
         edges: dict[str, tuple[Edge, ...]] = {src: tuple(es) for src, es in self._edges.items()}

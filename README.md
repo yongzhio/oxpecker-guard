@@ -383,7 +383,7 @@ oxpecker-guard/
 
 - **Hand-rolled orchestrator, no framework dependency.** Inspired by LangGraph's design philosophy but reimplemented to keep the seams visible. (LangGraph itself uses similar phrasing about its influences: "LangGraph is inspired by Pregel and Apache Beam.") A reader who sees `LangGraph.invoke()` doesn't see the tool-call dispatch or the allowlist check; a reader who sees a 30-line Python loop with the check inline does. The reason for hand-rolling is pedagogical, not because LangGraph's design is wrong.
 - **Python 3.10+.** The language choice is bounded by pedagogical clarity. A high-performance rewrite (C++, Rust, Go, mixed) is on the back burner, gated on benchmark evidence rather than pre-committed.
-- **Local model server (LM Studio or Ollama) primary; cloud APIs optional secondary.** Reproducibility for readers without API keys.
+- **Local model server primary; the demos target Ollama by default (`localhost:11434`).** The `ModelClient` uses the OpenAI-compatible HTTP interface, which means LM Studio (`localhost:1234`) or any compatible endpoint also works — just change `base_url` and `model_name` in the demo's `config.toml`. Cloud APIs (Gemini free tier, etc.) are optional secondary, planned for v0.2+.
 - **Real LLMs for failure demonstrations, not mocks.** Failures must be real failures, not scripted ones.
 - **OpenAI-compatible API for tool calls.** LM Studio and Ollama both serve this shape.
 

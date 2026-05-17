@@ -153,29 +153,29 @@ the run state, so a human reviewer can see what was suppressed.
 
 ## Context window requirements
 
-Qwen3 models use an internal "thinking" mode: before producing the visible
-response, the model generates reasoning tokens that consume context. These
-thinking tokens can run to several thousand tokens, so the default
-`num_ctx=4096` is far too small and larger values like 8192 can also trigger
-KV cache clearing failures on some Ollama builds.
+The demo embeds a full legal filing in the user message. A typical filing
+runs 1500-4000 tokens; combined with the system prompt, the model's
+summary output, and any internal model framing, a single run can exceed
+the default Ollama context window of 2048 tokens.
 
-The demo uses `qwen3.5:9b-65k` (65536-token context window), which avoids all
-KV cache shifting issues and gives the model ample room for its thinking chain.
-Create the tag once with:
+The demo uses `qwen3.5:9b-65k` (65536-token context window), created via
+the shared Modelfile in `examples/qwen3-9b-65k.Modelfile`. This gives
+ample headroom for any reasonable filing length.
 
-```bash
-ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
-```
+Thinking mode is disabled via the `/no_think` directive appended to the
+user message. Without this, Qwen3 generates several thousand reasoning
+tokens before producing the visible summary, making each run take
+minutes. With thinking disabled, summarization completes in tens of
+seconds.
 
-The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
-model weights — total ~12 GiB, within a 16 GiB GPU.
+The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the
+~5.6 GiB model weights — total ~12 GiB, within a 16 GiB GPU.
 
-**Timeout:** With thinking disabled via `/no_think`, summarization tasks
-complete within a few minutes. The default is `timeout_seconds = 300.0`.
-Raise it if you switch to a model without a fast-response mode.
-
-If you supply a longer custom filing via `--filing`, the prompt token count
-rises but 65536 tokens provides ample headroom for any reasonable filing length.
+**Timeout:** With thinking disabled, summarization completes within a
+few minutes for filings of typical length. The default
+`timeout_seconds = 300.0` provides ample headroom; raise it if you
+supply a very long custom filing via `--filing`, or if you switch to
+a model without a fast-response mode.
 
 ---
 

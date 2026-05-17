@@ -401,7 +401,7 @@ The compositional orchestrator is graph-based. Its main components:
 The orchestrator supports:
 
 - A graph-based execution model with deterministic guard slots at every node.
-- Operator config loaded from YAML, validated against a schema.
+- Operator config loaded from a typed TOML file, validated by a pydantic model with `extra="forbid"` so typos surface as clear errors.
 - Append-only audit log written at every state transition.
 - Checkpoint serialization and single-use resume for gate-node pauses.
 - Pluggable node types and pluggable guards — none privileged by the orchestrator.

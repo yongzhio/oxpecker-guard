@@ -123,7 +123,7 @@ Reading these in order moves from "what is the orchestrator capable of" through 
 
 ### What the graph represents
 
-An LLM agent application is a sequence of operations: receive a prompt, look things up, talk to the model, dispatch a tool, check a result, respond, repeat as needed. The orchestrator represents this sequence as a graph — *nodes* are operations the application performs (e.g., "assemble the prompt," "call the model," "dispatch a tool"), *edges* are the transitions between them (sometimes conditional, like "if the model wants to call a tool, go here; otherwise, go there"). Edges may form cycles, so the agent can loop back to call the model again with new tool results.
+An LLM agent application is a sequence of operations: receive a prompt, look things up, talk to the model, dispatch a tool, check a result, respond, repeat as needed. The orchestrator represents this sequence as a graph — *nodes* are operations the application performs (e.g., "assemble the prompt," "call the model," "dispatch a tool"), *edges* are the unconditional transitions between them. Branching is expressed by a node's handler returning the name of the next node explicitly; edges themselves carry no conditions. Edges may form cycles, so the agent can loop back to call the model again with new tool results.
 
 A user's prompt enters the graph at the entry node. The final reply leaves the graph at a terminal node. Everything in between is the application's own choreography: which operation runs when, what conditions branch the flow, how many loops are allowed before the run terminates.
 
@@ -318,7 +318,7 @@ Each demo is structured around four questions: where does it fit in the architec
 ### Build sequence
 
 ```
-v0    : Orchestrator core, audit log, measurement infra (no demos yet)
+v0    : Orchestrator core + gate-node foundations (no demos yet)
 v0.1  : Examples 1, 4a, 6
 v0.2  : Examples 4b, 7, 5
 v0.3  : Examples 2, 8a, 8b
@@ -348,7 +348,7 @@ oxpecker-guard/
 ### Implementation choices
 
 - **Hand-rolled orchestrator, no framework dependency.** Inspired by LangGraph's design philosophy but reimplemented to keep the seams visible. (LangGraph itself uses similar phrasing about its influences: "LangGraph is inspired by Pregel and Apache Beam.") A reader who sees `LangGraph.invoke()` doesn't see the tool-call dispatch or the allowlist check; a reader who sees a 30-line Python loop with the check inline does. The reason for hand-rolling is pedagogical, not because LangGraph's design is wrong.
-- **Python 3.12.** The language choice is bounded by pedagogical clarity. A high-performance rewrite (C++, Rust, Go, mixed) is on the back burner, gated on benchmark evidence rather than pre-committed.
+- **Python 3.10+.** The language choice is bounded by pedagogical clarity. A high-performance rewrite (C++, Rust, Go, mixed) is on the back burner, gated on benchmark evidence rather than pre-committed.
 - **Local model server (LM Studio or Ollama) primary; cloud APIs optional secondary.** Reproducibility for readers without API keys.
 - **Real LLMs for failure demonstrations, not mocks.** Failures must be real failures, not scripted ones.
 - **OpenAI-compatible API for tool calls.** LM Studio and Ollama both serve this shape.
@@ -357,19 +357,49 @@ oxpecker-guard/
 
 The compositional orchestrator is graph-based. Its main components:
 
-- **`RunState`** — mutable state object passed through every node: messages, tool history, guard outcomes, run ID, audit log handle. Serializable for checkpointing.
-- **`Node` and `Edge` types** — explicit graph primitives. Nodes do work; edges are conditional transitions evaluated by deterministic predicates. The graph is constructed declaratively per-demo via `GraphBuilder`.
-- **`GuardSlot`** — between every pair of connected nodes. Empty (pass-through), or one or more guards.
-- **`GraphRunner`** — walks the graph, evaluates slots, emits audit events at every transition.
+- **`RunState`** — mutable state passed through every node: messages, tool history, run ID, user identity, budget counters. Serializable for checkpointing.
+- **`Node` and `Edge` types** — explicit graph primitives. Nodes have async handlers that do work; edges are unconditional. Branching is expressed by handlers returning the next node name explicitly (the "explicit-next" pattern). The graph is constructed declaratively per-demo via `GraphBuilder`.
+- **`GuardSlot`** — between every pair of connected nodes. Empty (pass-through), or one or more deterministic guards run in declaration order; first rejection halts the slot.
+- **`GateNode`** — an abstract interface for human-in-the-loop pause points. When the runner reaches a gate node, it saves a checkpoint and exits with `PausedOutcome`. The caller delivers a signal through whatever mechanism the deployment uses, then calls `runner.resume(checkpoint_id, signal)` to continue.
+- **`GraphRunner`** — walks the graph, evaluates slots, emits audit events at every transition. Returns one of five outcomes: `CompletedOutcome`, `RejectedOutcome`, `CapExceededOutcome`, `ErrorOutcome`, or `PausedOutcome`.
 
-The orchestrator must support:
+The orchestrator supports:
 
-- A graph-based execution model with deterministic guard slots between every node transition.
+- A graph-based execution model with deterministic guard slots at every node.
 - Operator config loaded from YAML, validated against a schema.
-- Audit log writing on every state transition.
-- Checkpoint serialization for durable execution (human-approval pauses).
-- Deterministic conditional edges (predicates evaluated in code, not by an LLM).
+- Append-only audit log written at every state transition.
+- Checkpoint serialization and single-use resume for gate-node pauses.
 - Pluggable node types and pluggable guards — none privileged by the orchestrator.
+
+### Gate nodes and human-in-the-loop
+
+Some decisions belong to humans, not algorithms. The orchestrator supports this through *gate nodes* — explicit pause points in the graph where execution halts and waits for a signal from outside the agent's trust domain.
+
+A gate node declares a finite signal vocabulary at build time (`"approved"`, `"rejected"`, `"timed_out"`, etc.) and a routing map: each signal value routes to a named next node. When the runner reaches a gate node:
+
+1. It saves the run's complete state to a checkpoint on disk.
+2. It emits a `gate_enter` audit event.
+3. It exits with `PausedOutcome`, carrying the checkpoint ID and the gate's signal vocabulary.
+
+The caller then obtains a signal through whatever mechanism the deployment uses — CLI prompt, web-UI push, Slack notification, MFA webhook — and calls `runner.resume(checkpoint_id, signal, metadata)`. The runner validates the signal against the gate's declared enumeration, marks the checkpoint consumed, emits `gate_signal` and `checkpoint_resume` audit events, and continues the run from the node the signal maps to.
+
+**Signal-source trust.** The orchestrator validates that the signal is in the declared enumeration. It does not validate *where* the signal came from. Authentication — confirming that the signal was produced by a legitimate, properly-authorized human through a properly-secured channel — is the deployment's responsibility. Pre-AI security best practices apply at the authenticator interface: TLS, signed tokens, MFA ceremony, hardware attestation, whatever the deployment requires. The orchestrator provides deterministic plumbing, not the authentication layer.
+
+**Flow uniqueness.** Checkpoints are single-use. Once a checkpoint is consumed (resumed once), it cannot be resumed again — the file is preserved on disk with status `consumed`, and any attempt to re-resume raises immediately. This encodes a deliberate position: a signal delivered at a specific moment is a historical fact, not a hypothetical. Re-routing the same flow after the fact would corrupt the accountability record.
+
+**Graph-version pinning.** A checkpoint records the structural hash of the graph at pause time. `resume()` refuses if the current graph's hash doesn't match. This prevents a code change deployed while a run is paused from silently affecting a flow that was authorized under the old graph. Pending checkpoints must be explicitly abandoned before a structurally changed graph is put into service.
+
+### How this differs from LangGraph, CrewAI, and AutoGen
+
+OPG's structural contribution is to move decisions from imperative handler code into declarative graph structure. Where conventional frameworks rely on the builder writing correct imperative code (validation logic, routing parsing, re-evaluation logic), OPG provides declarative primitives (guard slots, gate nodes, signal enumerations) that make those decisions visible in the graph declaration rather than buried in handler functions.
+
+Three concrete structural differences:
+
+**Guard slots vs. validation-in-handlers.** In LangGraph and CrewAI, validation lives in handler or edge code. Removing a validation check looks like any other handler refactoring in a git diff. In OPG, removing a guard means changing the slot's declaration — a change that's visible as a structural modification. More importantly, OPG's graph-version-pinning prevents a modified graph from resuming checkpoints saved under the old version: code deployed while a run is paused cannot silently alter what the run can do. LangGraph has no equivalent mechanism.
+
+**Typed signal enumeration vs. free-form resume values.** LangGraph's `interrupt()` returns free-form values; handler code interprets them via string matching. AutoGen and CrewAI route through agent reasoning, which is probabilistic at the decision point. OPG's gate node routing is `next_node = routing[signal]` — a dictionary lookup on a closed, declared enumeration. Invalid signals raise immediately. The class of possible mistakes shifts from "parsing drift under deployment evolution" to "wrong enumeration declared," which is a declaration-level error visible in the graph file.
+
+**Per-node-visit guard re-evaluation vs. design-time allowlists.** In LangGraph and AutoGen, tool allowlists are configured at agent construction time. Re-evaluation against accumulated conversation context — a tool that was safe at message 3 may be unsafe at message 30 — must be hand-wired by the builder into every tool wrapper. In OPG, every node visit triggers slot evaluation unconditionally. A guard that reads `state.messages` and `state.counters` re-evaluates against current state automatically, without the builder having to remember to wire it.
 
 ### Audit log
 

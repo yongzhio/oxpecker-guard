@@ -77,7 +77,11 @@ async def main(
 
     state = RunState()
     state.append_message(Message(role="system", content=_SYSTEM_PROMPT))
-    state.append_message(Message(role="user", content=filing_text))
+    # /no_think disables Qwen3's internal reasoning chain. For this demo, the
+    # guard inspects the visible output, so the reasoning chain adds latency
+    # without affecting what the guard sees. This directive is Qwen3-specific;
+    # other models will ignore it.
+    state.append_message(Message(role="user", content=f"{filing_text}\n\n/no_think"))
 
     checkpoint_dir = Path(cfg.storage.checkpoint_dir)
     checkpoint_store = CheckpointStore.at(checkpoint_dir)

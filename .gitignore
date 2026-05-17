@@ -1,3 +1,8 @@
+docs/diagrams/sequence_4a.svg
+docs/diagrams/class_diagram.svg
+docs/design_notes/
+docs/backlog.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

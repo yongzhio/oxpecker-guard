@@ -14,7 +14,6 @@ def test_runstate_defaults_minimal() -> None:
     assert state.messages == []
     assert state.counters.iterations == 0
     assert state.counters.tool_calls == 0
-    assert state.scratch == {}
 
 
 def test_runstate_append_message() -> None:

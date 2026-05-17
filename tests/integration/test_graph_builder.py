@@ -6,6 +6,8 @@ load-bearing for the orchestrator's reproducibility claims.
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from opg.core.graph import GraphBuilder, GuardPass
@@ -30,18 +32,16 @@ def passing_guard(_state: RunState) -> GuardPass:
 
 
 def test_build_minimal_graph() -> None:
-    """A two-node graph with one edge and one terminal builds successfully."""
+    """A two-node graph with one edge builds successfully."""
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=noop)
         .node("b", handler=noop)
         .edge("a", "b")
-        .terminal("b")
         .build()
     )
     assert g.entry == "a"
     assert set(g.nodes) == {"a", "b"}
-    assert g.terminals == frozenset({"b"})
     assert "a" in g.edges
     assert g.edges["a"][0].target == "b"
 
@@ -53,7 +53,6 @@ def test_build_graph_with_kind_metadata() -> None:
         .node("start", handler=noop, kind="entrypoint")
         .node("end", handler=noop, kind="terminal")
         .edge("start", "end")
-        .terminal("end")
         .build()
     )
     assert g.nodes["start"].kind == "entrypoint"
@@ -67,35 +66,39 @@ def test_build_graph_with_guard_slots() -> None:
         .node("a", handler=noop)
         .node("b", handler=noop)
         .edge("a", "b")
-        .terminal("b")
         .guard_before("a", passing_guard)
         .guard_after("a", passing_guard, passing_guard)
         .build()
     )
-    assert g.slots[("a", "before")].guards == (passing_guard,)
-    assert g.slots[("a", "after")].guards == (passing_guard, passing_guard)
+    assert g.before_slots["a"].guards == (passing_guard,)
+    assert g.after_slots["a"].guards == (passing_guard, passing_guard)
     # slots not declared remain absent (= empty/pass-through)
-    assert ("b", "before") not in g.slots
+    assert "b" not in g.before_slots
 
 
-def test_build_graph_with_conditional_edge() -> None:
-    def branch_left(state: RunState) -> bool:
-        return state.scratch.get("go_left", False)
-
+def test_build_graph_with_multiple_outgoing_edges() -> None:
+    """A node may have multiple outgoing edges; handler must return explicit_next."""
     g = (
         GraphBuilder(entry="decision")
         .node("decision", handler=noop)
         .node("left", handler=noop)
         .node("right", handler=noop)
-        .edge("decision", "left", predicate=branch_left)
-        .edge("decision", "right")  # unconditional fallthrough
-        .terminal("left")
-        .terminal("right")
+        .edge("decision", "left")
+        .edge("decision", "right")
         .build()
     )
     assert len(g.edges["decision"]) == 2
-    assert g.edges["decision"][0].predicate is branch_left
-    assert g.edges["decision"][1].predicate is None
+    targets = {e.target for e in g.edges["decision"]}
+    assert targets == {"left", "right"}
+
+
+def test_sink_node_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
+    """A node with no outgoing edges logs a warning at build time (not an error)."""
+    with caplog.at_level(logging.WARNING, logger="opg.core.graph"):
+        GraphBuilder(entry="a").node("a", handler=noop).node("b", handler=noop).edge(
+            "a", "b"
+        ).build()
+    assert any("no outgoing edges" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
@@ -111,46 +114,13 @@ def test_entry_must_be_declared() -> None:
 def test_edge_source_must_be_declared() -> None:
     builder = GraphBuilder(entry="a").node("a", handler=noop)
     builder.edge("ghost", "a")
-    builder.terminal("a")
     with pytest.raises(ValueError, match="edge source"):
         builder.build()
 
 
 def test_edge_target_must_be_declared() -> None:
-    builder = GraphBuilder(entry="a").node("a", handler=noop).edge("a", "ghost").terminal("a")
+    builder = GraphBuilder(entry="a").node("a", handler=noop).edge("a", "ghost")
     with pytest.raises(ValueError, match="edge target"):
-        builder.build()
-
-
-def test_terminal_must_be_declared() -> None:
-    builder = GraphBuilder(entry="a").node("a", handler=noop).terminal("ghost")
-    with pytest.raises(ValueError, match="terminal 'ghost' not declared"):
-        builder.build()
-
-
-def test_terminal_cannot_have_outgoing_edges() -> None:
-    builder = (
-        GraphBuilder(entry="a")
-        .node("a", handler=noop)
-        .node("b", handler=noop)
-        .edge("a", "b")
-        .edge("b", "a")  # b is supposed to be terminal but has an outgoing edge
-        .terminal("b")
-    )
-    with pytest.raises(ValueError, match="terminal 'b' has outgoing edges"):
-        builder.build()
-
-
-def test_non_terminal_must_have_outgoing_edges() -> None:
-    """A node that is not a terminal and has no outgoing edges is a dead-end
-    and should be rejected at build time."""
-    builder = (
-        GraphBuilder(entry="a")
-        .node("a", handler=noop)
-        .node("b", handler=noop)  # b is reached but is neither terminal nor has outgoing edges
-        .edge("a", "b")
-    )
-    with pytest.raises(ValueError, match="non-terminal node 'b'"):
         builder.build()
 
 
@@ -160,27 +130,20 @@ def test_node_redeclaration_rejected() -> None:
         builder.node("a", handler=noop)
 
 
-def test_multiple_unconditional_edges_rejected() -> None:
+def test_duplicate_edge_rejected() -> None:
+    """Two edges with the same source and target are rejected."""
     builder = (
         GraphBuilder(entry="a")
         .node("a", handler=noop)
         .node("b", handler=noop)
-        .node("c", handler=noop)
         .edge("a", "b")
-        .edge("a", "c")  # both unconditional from 'a'
-        .terminal("b")
-        .terminal("c")
+        .edge("a", "b")  # duplicate
     )
-    with pytest.raises(ValueError, match="multiple unconditional outgoing edges"):
+    with pytest.raises(ValueError, match="duplicate edge"):
         builder.build()
 
 
 def test_slot_must_reference_declared_node() -> None:
-    builder = (
-        GraphBuilder(entry="a")
-        .node("a", handler=noop)
-        .terminal("a")
-        .guard_before("ghost", passing_guard)
-    )
+    builder = GraphBuilder(entry="a").node("a", handler=noop).guard_before("ghost", passing_guard)
     with pytest.raises(ValueError, match="undeclared node 'ghost'"):
         builder.build()

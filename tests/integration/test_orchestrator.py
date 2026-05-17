@@ -1,8 +1,8 @@
 """Orchestrator runtime flow tests.
 
 Comprehensive coverage of how the GraphRunner walks a Graph: node execution,
-guard slots, conditional edges, explicit-next overrides, terminals, error
-propagation, hard caps, and audit-log emission.
+guard slots, explicit-next routing, terminals, error propagation, hard caps,
+and audit-log emission.
 
 Per v0 instructions, this is where test coverage matters most.
 """
@@ -73,14 +73,13 @@ def make_runner(graph, audit, *, max_iterations: int = 20) -> GraphRunner:
 
 @pytest.mark.asyncio
 async def test_linear_two_node_run_completes(tmp_path: Path) -> None:
-    """Simplest happy path: a → b (terminal). All nodes execute, run completes."""
+    """Simplest happy path: a → b (sink). All nodes execute, run completes."""
     visited: list[str] = []
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=make_recording_handler("a", visited))
         .node("b", handler=make_recording_handler("b", visited))
         .edge("a", "b")
-        .terminal("b")
         .build()
     )
     state = RunState()
@@ -103,7 +102,6 @@ async def test_passing_guard_in_before_slot_does_not_block(tmp_path: Path) -> No
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=make_recording_handler("a", visited))
-        .terminal("a")
         .guard_before("a", make_passing_guard("ok"))
         .build()
     )
@@ -122,7 +120,6 @@ async def test_rejecting_guard_in_before_slot_halts_before_node(tmp_path: Path) 
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=make_recording_handler("a", visited))
-        .terminal("a")
         .guard_before("a", make_rejecting_guard("blocker", "no go"))
         .build()
     )
@@ -147,7 +144,6 @@ async def test_rejecting_guard_in_after_slot_halts_after_node(tmp_path: Path) ->
         .node("a", handler=make_recording_handler("a", visited))
         .node("b", handler=make_recording_handler("b", visited))
         .edge("a", "b")
-        .terminal("b")
         .guard_after("a", make_rejecting_guard("blocker"))
         .build()
     )
@@ -166,7 +162,6 @@ async def test_multiple_guards_in_one_slot_run_in_order(tmp_path: Path) -> None:
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=noop_handler)
-        .terminal("a")
         .guard_before(
             "a",
             make_passing_guard("first"),
@@ -187,12 +182,7 @@ async def test_multiple_guards_in_one_slot_run_in_order(tmp_path: Path) -> None:
 async def test_empty_slot_is_pass_through(tmp_path: Path) -> None:
     """A node with no guards in either slot runs without slot events."""
     visited: list[str] = []
-    g = (
-        GraphBuilder(entry="a")
-        .node("a", handler=make_recording_handler("a", visited))
-        .terminal("a")
-        .build()
-    )
+    g = GraphBuilder(entry="a").node("a", handler=make_recording_handler("a", visited)).build()
     state = RunState()
     with AuditLog.open(state.run_id, dir=tmp_path) as audit:
         await make_runner(g, audit).run(state)
@@ -205,54 +195,46 @@ async def test_empty_slot_is_pass_through(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Conditional edges
+# Explicit-next routing
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_conditional_edge_taken_when_predicate_true(tmp_path: Path) -> None:
+async def test_explicit_next_routes_to_chosen_branch(tmp_path: Path) -> None:
+    """A decision handler returning an explicit next-node name routes there."""
     visited: list[str] = []
 
-    def go_left(state: RunState) -> bool:
-        return state.scratch.get("branch") == "left"
+    async def decide(_state: RunState) -> str:
+        return "left"
 
     g = (
         GraphBuilder(entry="decide")
-        .node("decide", handler=make_recording_handler("decide", visited))
+        .node("decide", handler=decide)
         .node("left", handler=make_recording_handler("left", visited))
         .node("right", handler=make_recording_handler("right", visited))
-        .edge("decide", "left", predicate=go_left)
+        .edge("decide", "left")
         .edge("decide", "right")
-        .terminal("left")
-        .terminal("right")
         .build()
     )
     state = RunState()
-    state.scratch["branch"] = "left"
     with AuditLog.open(state.run_id, dir=tmp_path) as audit:
         outcome = await make_runner(g, audit).run(state)
 
     assert isinstance(outcome, CompletedOutcome)
     assert outcome.final_node == "left"
-    assert visited == ["decide", "left"]
+    assert visited == ["left"]
 
 
 @pytest.mark.asyncio
-async def test_unconditional_edge_taken_when_no_predicate_matches(tmp_path: Path) -> None:
+async def test_single_outgoing_edge_taken_when_handler_returns_none(tmp_path: Path) -> None:
+    """A handler returning None on a single-edge node takes the one edge."""
     visited: list[str] = []
 
-    def never(_state: RunState) -> bool:
-        return False
-
     g = (
-        GraphBuilder(entry="decide")
-        .node("decide", handler=make_recording_handler("decide", visited))
-        .node("left", handler=make_recording_handler("left", visited))
-        .node("right", handler=make_recording_handler("right", visited))
-        .edge("decide", "left", predicate=never)
-        .edge("decide", "right")  # unconditional fallthrough
-        .terminal("left")
-        .terminal("right")
+        GraphBuilder(entry="a")
+        .node("a", handler=make_recording_handler("a", visited))
+        .node("b", handler=make_recording_handler("b", visited))
+        .edge("a", "b")
         .build()
     )
     state = RunState()
@@ -260,24 +242,20 @@ async def test_unconditional_edge_taken_when_no_predicate_matches(tmp_path: Path
         outcome = await make_runner(g, audit).run(state)
 
     assert isinstance(outcome, CompletedOutcome)
-    assert outcome.final_node == "right"
+    assert outcome.final_node == "b"
+    assert visited == ["a", "b"]
 
 
 @pytest.mark.asyncio
-async def test_only_conditionals_and_none_match_returns_error_outcome(tmp_path: Path) -> None:
-    """If the only edges are conditional and none fires, the run returns an
-    ErrorOutcome rather than raising. This is treated like any other graph-
-    design defect: surfaced loudly via the outcome and the audit log."""
-
-    def never(_state: RunState) -> bool:
-        return False
-
+async def test_multiple_edges_with_none_handler_returns_error_outcome(tmp_path: Path) -> None:
+    """A handler returning None on a multi-edge node is a graph-design error."""
     g = (
         GraphBuilder(entry="decide")
         .node("decide", handler=noop_handler)
         .node("left", handler=noop_handler)
-        .edge("decide", "left", predicate=never)
-        .terminal("left")
+        .node("right", handler=noop_handler)
+        .edge("decide", "left")
+        .edge("decide", "right")
         .build()
     )
     state = RunState()
@@ -286,7 +264,7 @@ async def test_only_conditionals_and_none_match_returns_error_outcome(tmp_path: 
 
     assert isinstance(outcome, ErrorOutcome)
     assert outcome.node == "decide"
-    assert "no" in outcome.message.lower() and "matched" in outcome.message.lower()
+    assert "multiple outgoing edges" in outcome.message
 
 
 # ---------------------------------------------------------------------------
@@ -295,25 +273,20 @@ async def test_only_conditionals_and_none_match_returns_error_outcome(tmp_path: 
 
 
 @pytest.mark.asyncio
-async def test_loop_terminates_via_predicate(tmp_path: Path) -> None:
-    """A graph with a cycle where a predicate eventually breaks out."""
+async def test_loop_terminates_via_explicit_next(tmp_path: Path) -> None:
+    """A graph with a cycle where the handler eventually routes to the exit node."""
     visit_count = {"count": 0}
 
-    async def loop_body(state: RunState) -> None:
+    async def loop_body(_state: RunState) -> str:
         visit_count["count"] += 1
-        state.scratch["count"] = visit_count["count"]
-        return None
-
-    def done(state: RunState) -> bool:
-        return state.scratch.get("count", 0) >= 3
+        return "end" if visit_count["count"] >= 3 else "loop"
 
     g = (
         GraphBuilder(entry="loop")
         .node("loop", handler=loop_body)
         .node("end", handler=noop_handler)
-        .edge("loop", "end", predicate=done)
+        .edge("loop", "end")
         .edge("loop", "loop")
-        .terminal("end")
         .build()
     )
     state = RunState()
@@ -362,8 +335,6 @@ async def test_handler_explicit_next_overrides_edges(tmp_path: Path) -> None:
         .node("left", handler=make_recording_handler("left", visited))
         .node("right", handler=make_recording_handler("right", visited))
         .edge("decide", "left")  # would be taken if not overridden
-        .terminal("left")
-        .terminal("right")
         .build()
     )
     state = RunState()
@@ -385,7 +356,6 @@ async def test_handler_explicit_next_to_unknown_node_errors(tmp_path: Path) -> N
         .node("a", handler=bad)
         .node("b", handler=noop_handler)
         .edge("a", "b")
-        .terminal("b")
         .build()
     )
     state = RunState()
@@ -407,7 +377,7 @@ async def test_handler_exception_produces_error_outcome(tmp_path: Path) -> None:
     async def explode(_state: RunState) -> None:
         raise ValueError("boom")
 
-    g = GraphBuilder(entry="bad").node("bad", handler=explode).terminal("bad").build()
+    g = GraphBuilder(entry="bad").node("bad", handler=explode).build()
     state = RunState()
     with AuditLog.open(state.run_id, dir=tmp_path) as audit:
         outcome = await make_runner(g, audit).run(state)
@@ -432,7 +402,6 @@ async def test_audit_log_records_full_run_sequence(tmp_path: Path) -> None:
         .node("a", handler=noop_handler, kind="custom_kind")
         .node("b", handler=noop_handler)
         .edge("a", "b")
-        .terminal("b")
         .guard_before("a", make_passing_guard("g1"))
         .guard_after("b", make_passing_guard("g2"))
         .build()
@@ -463,7 +432,6 @@ async def test_audit_log_records_rejection_reason(tmp_path: Path) -> None:
     g = (
         GraphBuilder(entry="a")
         .node("a", handler=noop_handler)
-        .terminal("a")
         .guard_before("a", make_rejecting_guard("strict", "policy violation"))
         .build()
     )
@@ -498,7 +466,6 @@ async def test_runs_with_same_inputs_produce_same_event_types(tmp_path: Path) ->
             .node("a", handler=noop_handler)
             .node("b", handler=noop_handler)
             .edge("a", "b")
-            .terminal("b")
             .guard_after("a", make_passing_guard("g"))
             .build()
         )

@@ -145,17 +145,9 @@ class GraphRunner:
                 if rejection is not None:
                     return rejection
 
-                # Terminal node ends the run normally
-                if current in self._graph.terminals:
-                    self._audit.emit(
-                        "run_end",
-                        {"reason": "completed", "final_node": current},
-                    )
-                    return CompletedOutcome(final_node=current, state=state)
-
-                # Resolve next node
+                # Resolve next node (None means no outgoing edges — run completes here)
                 try:
-                    current = self._resolve_next(state, current, explicit_next)
+                    next_node = self._resolve_next(state, current, explicit_next)
                 except RuntimeError as exc:
                     self._audit.emit(
                         "error",
@@ -172,6 +164,15 @@ class GraphRunner:
                         node=current,
                         state=state,
                     )
+
+                if next_node is None:
+                    self._audit.emit(
+                        "run_end",
+                        {"reason": "completed", "final_node": current},
+                    )
+                    return CompletedOutcome(final_node=current, state=state)
+
+                current = next_node
         finally:
             # Outcomes already emitted run_end; this is a safety net for
             # paths that escape without one (none currently, but defensive).
@@ -187,7 +188,8 @@ class GraphRunner:
         node_name: str,
         position: SlotPosition,
     ) -> RejectedOutcome | None:
-        slot = self._graph.slots.get((node_name, position))
+        slot_dict = self._graph.before_slots if position == "before" else self._graph.after_slots
+        slot = slot_dict.get(node_name)
         if slot is None or not slot.guards:
             return None  # empty slot — pass-through
 
@@ -247,8 +249,8 @@ class GraphRunner:
         state: RunState,
         current: str,
         explicit_next: str | None,
-    ) -> str:
-        """Pick the next node based on explicit override or edge predicates."""
+    ) -> str | None:
+        """Pick the next node. Returns None when the node is a sink (no outgoing edges)."""
         if explicit_next is not None:
             if explicit_next not in self._graph.nodes:
                 raise RuntimeError(
@@ -259,18 +261,12 @@ class GraphRunner:
 
         edges = self._graph.edges.get(current, ())
         if not edges:
-            raise RuntimeError(f"node {current!r} has no outgoing edges and is not a terminal")
+            return None  # sink node — run completes here
 
-        # Conditional edges first, in declaration order
-        for e in edges:
-            if e.predicate is None:
-                continue
-            if e.predicate(state):
-                return e.target
+        if len(edges) > 1:
+            raise RuntimeError(
+                f"node {current!r} has multiple outgoing edges and handler returned None; "
+                "handler must return an explicit next-node name"
+            )
 
-        # Fall through to unconditional
-        for e in edges:
-            if e.predicate is None:
-                return e.target
-
-        raise RuntimeError(f"node {current!r} has only conditional edges and none matched")
+        return edges[0].target

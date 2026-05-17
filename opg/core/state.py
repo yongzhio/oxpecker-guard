@@ -5,7 +5,6 @@ The state holds everything an executing run needs:
   * tool call history (what the model asked to do, what came back)
   * the run's identity (UUID, started-at, user identity if any)
   * counters used by guards (iterations, tool calls, tokens spent)
-  * arbitrary scratch space the demo can use
 
 State is mutable across the run. Snapshots are JSON-serializable for
 checkpointing — see opg/core/checkpoint.py.
@@ -105,8 +104,6 @@ class RunState(BaseModel):
 
     messages: list[Message] = Field(default_factory=list)
     counters: Counters = Field(default_factory=Counters)
-    scratch: dict[str, Any] = Field(default_factory=dict)
-    """Arbitrary per-run scratch space; demos may store demo-specific values here."""
 
     def append_message(self, message: Message) -> None:
         """Convenience for appending a message."""

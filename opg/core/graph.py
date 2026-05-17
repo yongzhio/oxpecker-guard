@@ -11,7 +11,10 @@ in opg/core/orchestrator.py.
 Design notes:
   * Nodes have names (string IDs) so the graph can be inspected and audited.
   * Node handlers are plain async callables; the runner awaits them.
-  * Edges may be conditional (a deterministic predicate over RunState).
+  * Edges are unconditional. Branching is expressed by handlers returning an
+    explicit next-node name (the explicit_next pattern). A node with multiple
+    outgoing edges must have a handler that returns explicit_next; returning
+    None from such a node is a runner-detected error.
   * Guards are also plain callables — see opg/core/guards.py for the protocol.
   * The graph is a frozen, validated data structure once built; the demo
     constructs it via GraphBuilder, then hands it to the runner.
@@ -23,10 +26,13 @@ to call the model client or dispatch a tool.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from opg.core.state import RunState
+
+_log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Handler protocols
@@ -34,23 +40,14 @@ from opg.core.state import RunState
 
 
 class NodeHandler(Protocol):
-    """A node's work function. Mutates RunState in place; may return a value
-    that conditional edges can inspect via `state.scratch[<key>]`.
+    """A node's work function. Mutates RunState in place.
 
-    Returning a string is a convention: the handler may return an explicit
-    next-node name to override edge resolution. This is the escape hatch for
-    nodes that need direct routing (e.g. a decision node returning the chosen
-    branch by name). Returning None means: use edges to resolve next.
+    Returning a string routes to the named node next (explicit_next pattern);
+    use this for decision nodes that need direct routing. Returning None means:
+    follow the single outgoing edge (error if there are multiple outgoing edges).
     """
 
     async def __call__(self, state: RunState) -> str | None: ...
-
-
-class EdgePredicate(Protocol):
-    """A deterministic predicate over RunState. Used by conditional edges.
-    Must be a pure function of the state — same inputs, same output."""
-
-    def __call__(self, state: RunState) -> bool: ...
 
 
 # Guard verdicts — see also opg/core/guards.py for the GuardFn protocol
@@ -98,29 +95,27 @@ SlotPosition = Literal["before", "after"]
 class GuardSlot:
     """A configurable slot at which guards may be bound.
 
-    Slots are addressed by (node_name, position). An empty slot (no guards)
-    is a pass-through. Guards bound to a slot run in declaration order; the
+    Position (before/after) is implicit in which graph collection the slot
+    lives in — `Graph.before_slots` or `Graph.after_slots`. An empty slot
+    (no guards) is a pass-through. Guards run in declaration order; the
     first rejection halts the slot's evaluation.
     """
 
     node_name: str
-    position: SlotPosition
     guards: tuple[GuardFn, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class Edge:
-    """A directed transition from one node to another, optionally conditional.
+    """A directed transition from one node to another.
 
-    If `predicate` is None the edge is unconditional. If multiple unconditional
-    edges leave a node, the graph is invalid. If multiple conditional edges
-    leave a node, they're evaluated in declaration order; the first whose
-    predicate returns True is taken.
+    Edges are unconditional. A node with multiple outgoing edges requires its
+    handler to return an explicit next-node name; the runner raises if the
+    handler returns None from a multi-edge node.
     """
 
     source: str
     target: str
-    predicate: EdgePredicate | None = None
     label: str = ""
     """Optional human-readable label used in audit events and diagrams."""
 
@@ -150,6 +145,9 @@ class Graph:
 
     Construct via GraphBuilder; do not instantiate directly outside that path
     (validation happens in the builder).
+
+    Termination is detected dynamically: the run completes when control reaches
+    a node with no outgoing edges whose handler returns None.
     """
 
     entry: str
@@ -159,11 +157,11 @@ class Graph:
     edges: dict[str, tuple[Edge, ...]]
     """Edges keyed by source node name."""
 
-    slots: dict[tuple[str, SlotPosition], GuardSlot]
-    """Slots keyed by (node_name, position). Missing key = empty slot."""
+    before_slots: dict[str, GuardSlot]
+    """Guards that run before the node's handler. Keyed by node_name."""
 
-    terminals: frozenset[str]
-    """Names of terminal nodes (no outgoing edges expected)."""
+    after_slots: dict[str, GuardSlot]
+    """Guards that run after the node's handler. Keyed by node_name."""
 
 
 # ---------------------------------------------------------------------------
@@ -179,27 +177,29 @@ class GraphBuilder:
         builder = GraphBuilder(entry="receive")
         builder.node("receive", handler=receive_request)
         builder.node("call_model", handler=call_model, kind="model_call")
-        builder.node("done", handler=finalize, kind="terminal")
+        builder.node("done", handler=finalize)
         builder.edge("receive", "call_model")
         builder.edge("call_model", "done")
-        builder.terminal("done")
         builder.guard_after("call_model", schema_validate)
         graph = builder.build()
+
+    Termination is detected dynamically at runtime: the run completes when it
+    reaches a node with no outgoing edges whose handler returns None. Nodes
+    with no outgoing edges emit a build-time warning, not an error.
 
     Validation runs in build():
       * entry node exists
       * every edge's source and target exist
-      * each terminal node has no outgoing edges
-      * each non-terminal node has at least one outgoing edge
-      * unconditional-edge uniqueness per source
+      * no duplicate edges (same source and target)
+      * slots reference declared nodes
     """
 
     def __init__(self, entry: str) -> None:
         self._entry = entry
         self._nodes: dict[str, Node] = {}
         self._edges: dict[str, list[Edge]] = {}
-        self._terminals: set[str] = set()
-        self._slots: dict[tuple[str, SlotPosition], list[GuardFn]] = {}
+        self._before_slots: dict[str, list[GuardFn]] = {}
+        self._after_slots: dict[str, list[GuardFn]] = {}
 
     def node(
         self,
@@ -216,24 +216,17 @@ class GraphBuilder:
         self,
         source: str,
         target: str,
-        predicate: EdgePredicate | None = None,
         label: str = "",
     ) -> GraphBuilder:
-        self._edges.setdefault(source, []).append(
-            Edge(source=source, target=target, predicate=predicate, label=label)
-        )
-        return self
-
-    def terminal(self, name: str) -> GraphBuilder:
-        self._terminals.add(name)
+        self._edges.setdefault(source, []).append(Edge(source=source, target=target, label=label))
         return self
 
     def guard_before(self, node_name: str, *guards: GuardFn) -> GraphBuilder:
-        self._slots.setdefault((node_name, "before"), []).extend(guards)
+        self._before_slots.setdefault(node_name, []).extend(guards)
         return self
 
     def guard_after(self, node_name: str, *guards: GuardFn) -> GraphBuilder:
-        self._slots.setdefault((node_name, "after"), []).extend(guards)
+        self._after_slots.setdefault(node_name, []).extend(guards)
         return self
 
     def build(self) -> Graph:
@@ -249,44 +242,39 @@ class GraphBuilder:
                 if e.target not in self._nodes:
                     raise ValueError(f"edge target {e.target!r} not declared (from {src!r})")
 
-        # Validation: terminals are declared nodes
-        for t in self._terminals:
-            if t not in self._nodes:
-                raise ValueError(f"terminal {t!r} not declared as a node")
-
-        # Validation: terminals have no outgoing edges
-        for t in self._terminals:
-            if self._edges.get(t):
-                raise ValueError(f"terminal {t!r} has outgoing edges")
-
-        # Validation: non-terminals have outgoing edges
-        for name in self._nodes:
-            if name in self._terminals:
-                continue
-            if not self._edges.get(name):
-                raise ValueError(f"non-terminal node {name!r} has no outgoing edges")
-
-        # Validation: at most one unconditional edge per source
+        # Validation: at most one edge per source-target pair
         for src, src_edges in self._edges.items():
-            unconditional = [e for e in src_edges if e.predicate is None]
-            if len(unconditional) > 1:
-                raise ValueError(f"node {src!r} has multiple unconditional outgoing edges")
+            targets = [e.target for e in src_edges]
+            seen: set[str] = set()
+            for t in targets:
+                if t in seen:
+                    raise ValueError(f"duplicate edge from {src!r} to {t!r}")
+                seen.add(t)
 
         # Validation: slots reference declared nodes
-        for (node_name, _pos), _ in self._slots.items():
+        for node_name in (*self._before_slots, *self._after_slots):
             if node_name not in self._nodes:
                 raise ValueError(f"slot references undeclared node {node_name!r}")
 
+        # Integrity notices: nodes with no outgoing edges are potential sinks
+        for name in self._nodes:
+            if not self._edges.get(name):
+                _log.warning("node %r has no outgoing edges; run will complete there", name)
+
         # Freeze
-        slots: dict[tuple[str, SlotPosition], GuardSlot] = {
-            key: GuardSlot(node_name=key[0], position=key[1], guards=tuple(guards))
-            for key, guards in self._slots.items()
+        before_slots = {
+            name: GuardSlot(node_name=name, guards=tuple(guards))
+            for name, guards in self._before_slots.items()
+        }
+        after_slots = {
+            name: GuardSlot(node_name=name, guards=tuple(guards))
+            for name, guards in self._after_slots.items()
         }
         edges: dict[str, tuple[Edge, ...]] = {src: tuple(es) for src, es in self._edges.items()}
         return Graph(
             entry=self._entry,
             nodes=dict(self._nodes),
             edges=edges,
-            slots=slots,
-            terminals=frozenset(self._terminals),
+            before_slots=before_slots,
+            after_slots=after_slots,
         )

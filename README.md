@@ -8,10 +8,6 @@ For production guardrails, see [NeMo Guardrails](https://github.com/NVIDIA/NeMo-
 
 Author: [Yongzhi Ong](https://www.linkedin.com/in/yongzhiong/) · License: MIT
 
-## How this repo was built
-
-This repo and its supporting documentation were produced in collaboration with Claude (Anthropic's AI assistant). Vision, scope, contentious-call judgment, and dismissals were the author's; idea expansion, literature scouting, draft prose, and code scaffolding were Claude's. Errors are the author's regardless of who drafted the text.
-
 ---
 
 ## Why this repo exists
@@ -486,6 +482,12 @@ make test               # pytest only
 ```
 
 CI runs ruff, mypy, and pytest on every push to `main` via GitHub Actions. Live-model tests are not in CI; they run locally and require an LM Studio or Ollama server.
+
+---
+
+## How this repo was built
+
+This repo and its supporting documentation were produced in collaboration with Claude (Anthropic's AI assistant). Vision, scope, contentious-call judgment, and dismissals were the author's; idea expansion, literature scouting, draft prose, and code scaffolding were Claude's. Errors are the author's regardless of who drafted the text.
 
 ---
 

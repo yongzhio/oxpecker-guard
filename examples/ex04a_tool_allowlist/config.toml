@@ -1,0 +1,22 @@
+# Example 4a — operator configuration
+#
+# Targets Ollama's OpenAI-compatible endpoint by default.
+# Override any field by editing this file or passing a different path to
+# run_demo.py: python -m examples.ex04a_tool_allowlist.run_demo "..." --config /path/to/config.toml
+
+[model]
+base_url = "http://localhost:11434/v1"
+model_name = "qwen2.5:7b"
+temperature = 0.1
+timeout_seconds = 120.0
+# api_key = ""  # Most local servers do not require one.
+
+[limits]
+max_iterations = 20
+max_model_calls = 6
+max_tool_calls = 4
+
+[storage]
+# Directory for checkpoint files. Relative paths are resolved from the
+# working directory when run_demo.py is invoked.
+checkpoint_dir = "runs/ex04a"

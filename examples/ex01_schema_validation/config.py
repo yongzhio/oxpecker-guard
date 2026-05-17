@@ -23,9 +23,9 @@ class ModelSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     base_url: str = "http://localhost:11434/v1"
-    model_name: str = "qwen3.5:9b"
+    model_name: str = "qwen3.5:9b-65k"
     temperature: float = 0.0
-    timeout_seconds: float = 120.0
+    timeout_seconds: float = 600.0
     api_key: str | None = None
 
 

@@ -15,9 +15,10 @@ Guards run in this order in the `after` slot of `call_model`. The first rejectio
 ## Prerequisites
 
 - Python 3.10 or 3.11+
-- [Ollama](https://ollama.com) running locally with a model pulled:
+- [Ollama](https://ollama.com) running locally with the model tag created:
   ```
   ollama pull qwen3.5:9b
+  ollama create qwen3.5:9b-65k -f examples/ex01_schema_validation/Modelfile
   ```
 - Repo installed: `pip install -e ".[dev]"` from the repo root
 
@@ -47,33 +48,48 @@ python -m examples.ex01_schema_validation.run_demo --config examples/ex01_schema
 
 ## Example prompts and expected outcomes
 
-**Clean path — all guards pass:**
+**Positive — all guards pass:**
 
 ```bash
 python -m examples.ex01_schema_validation.run_demo "Recommend a wireless mouse"
 ```
 
-A well-behaved model returns something like:
-```json
-{"product_id": "SKU-1001", "name": "Wireless mouse", "category": "peripherals", "price_usd": 24.99, "in_stock": true}
-```
-All three guards pass. Output: `completed at 'done'`.
+The model picks a product verbatim from the catalog. All three guards pass.
+Output: `completed at 'done'`.
 
-**Grounding rejection — model may invent a product:**
+---
 
-```bash
-python -m examples.ex01_schema_validation.run_demo "Recommend a Logitech MX Master 3"
-```
-
-The model may return a plausible-looking but nonexistent SKU (e.g., `"SKU-9999"`). The schema and semantic guards pass; the grounding guard rejects. Rejection reason: `product_id 'SKU-9999' not in operator catalog (model hallucination)`.
-
-**Schema rejection — model ignores formatting instruction:**
+**Negative 1 — grounding guard:** model hallucinates a SKU not in the catalog.
 
 ```bash
-python -m examples.ex01_schema_validation.run_demo "Tell me your favorite product in a long story"
+python -m examples.ex01_schema_validation.run_demo --no-catalog "Recommend a wireless mouse"
 ```
 
-The model may return prose rather than JSON. The schema guard rejects immediately. Rejection reason: `output is not valid JSON: ...`.
+Without the catalog in the prompt the model invents a product ID (e.g. `SKU-2045`).
+The schema and semantic guards pass; the grounding guard rejects.
+Rejection reason: `product_id 'SKU-2045' not in operator catalog (model hallucination)`.
+
+---
+
+**Negative 2 — semantic guard:** stub injects a payload with a negative price.
+
+```bash
+python -m examples.ex01_schema_validation.run_demo --stub '{"product_id":"SKU-1001","name":"Wireless mouse","category":"peripherals","price_usd":-10.00,"in_stock":true}'
+```
+
+The schema guard passes (valid JSON, correct fields); the semantic guard rejects.
+Rejection reason: `price_usd -10.0 out of range (0, 100000)`.
+
+---
+
+**Negative 3 — schema guard:** stub injects plain text instead of JSON.
+
+```bash
+python -m examples.ex01_schema_validation.run_demo --stub "not json at all"
+```
+
+The schema guard rejects immediately.
+Rejection reason: `output is not valid JSON: Expecting value`.
 
 ---
 
@@ -116,6 +132,29 @@ A rejected run will contain a `guard_reject` event with the rejecting guard's na
 ```json
 {"event_type": "guard_reject", "payload": {"guard": "grounding", "reason": "product_id 'SKU-9999' not in operator catalog"}}
 ```
+
+---
+
+## Context window requirements
+
+Qwen3 models use an internal "thinking" mode that generates reasoning tokens
+before the visible response. For this demo, thinking mode is disabled via the
+`/no_think` directive appended to each user message — the model responds
+directly with JSON, keeping latency to a few seconds rather than several minutes.
+
+The demo uses `qwen3.5:9b-65k` (65536-token context window) to avoid KV cache
+clearing failures seen with smaller values on some Ollama builds. Create the
+tag once with:
+
+```bash
+ollama create qwen3.5:9b-65k -f examples/ex01_schema_validation/Modelfile
+```
+
+The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
+model weights — total ~12 GiB, within a 16 GiB GPU.
+
+**Timeout:** With thinking disabled the model responds in seconds. The default
+`timeout_seconds = 600.0` provides ample headroom.
 
 ---
 

@@ -24,9 +24,10 @@ rejected before the summary surfaces.
 ## Prerequisites
 
 - Python 3.10 or 3.11+
-- [Ollama](https://ollama.com) running locally with a model pulled:
+- [Ollama](https://ollama.com) running locally with the model tag created:
   ```
   ollama pull qwen3.5:9b
+  ollama create qwen3.5:9b-65k -f examples/ex06_name_protection/Modelfile
   ```
 - Repo installed: `pip install -e ".[dev]"` from the repo root
 
@@ -132,28 +133,28 @@ the run state, so a human reviewer can see what was suppressed.
 ## Context window requirements
 
 Qwen3 models use an internal "thinking" mode: before producing the visible
-response, the model generates reasoning tokens that consume context. Combined
-with the filing prompt (~2300 tokens), this exhausts the default
-`num_ctx=4096`, causing Ollama to return a 500 and the demo to report a
-`ReadTimeout`.
+response, the model generates reasoning tokens that consume context. These
+thinking tokens can run to several thousand tokens, so the default
+`num_ctx=4096` is far too small and larger values like 8192 can also trigger
+KV cache clearing failures on some Ollama builds.
 
-The demo's default model tag is `qwen3.5:9b-8k` (8192-token context window).
-Create it once with:
+The demo uses `qwen3.5:9b-65k` (65536-token context window), which avoids all
+KV cache shifting issues and gives the model ample room for its thinking chain.
+Create the tag once with:
 
 ```bash
-cat > /tmp/Modelfile <<'EOF'
-FROM qwen3.5:9b
-PARAMETER num_ctx 8192
-EOF
-ollama create qwen3.5:9b-8k -f /tmp/Modelfile
+ollama create qwen3.5:9b-65k -f examples/ex06_name_protection/Modelfile
 ```
 
-8192 tokens leaves ~6000 tokens of headroom after the input for thinking output
-plus the summary. The extra KV cache costs roughly 10–15 MB of VRAM — negligible
-on a 16 GB GPU.
+The KV cache for 65536 tokens uses roughly 6 GiB of VRAM on top of the ~5.6 GiB
+model weights — total ~12 GiB, within a 16 GiB GPU.
 
-If you supply a longer custom filing via `--filing`, increase `num_ctx`
-proportionally and recreate the model tag.
+**Timeout:** Qwen3's thinking chain for a summarization task can take several
+minutes. The default `timeout_seconds = 600.0` (10 minutes) in `config.toml`
+covers this. Do not reduce it below 300 seconds.
+
+If you supply a longer custom filing via `--filing`, the prompt token count
+rises but 65536 tokens provides ample headroom for any reasonable filing length.
 
 ---
 

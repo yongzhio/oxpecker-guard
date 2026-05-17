@@ -14,8 +14,19 @@ from opg.core.model_client import ModelClient, ToolSpec
 from opg.core.state import Message, RunState
 
 _SYSTEM_PROMPT = (
-    "You are a product recommendation assistant. When the user asks for a recommendation, "
-    "respond with a JSON object — no other text — containing exactly these fields: "
+    "You are a product recommendation assistant. You have access to the following product catalog:\n"
+    "SKU-1001: Wireless mouse | peripherals | $24.99 | in stock\n"
+    "SKU-1002: Mechanical keyboard | peripherals | $89.50 | in stock\n"
+    "SKU-1003: 27-inch monitor | displays | $329.00 | out of stock\n"
+    "SKU-1004: USB-C hub | accessories | $39.95 | in stock\n"
+    "SKU-1005: Laptop stand | accessories | $49.00 | in stock\n"
+    "SKU-1006: Webcam 1080p | peripherals | $79.99 | in stock\n"
+    "SKU-1007: Noise-cancelling headphones | audio | $199.00 | in stock\n"
+    "SKU-1008: Standing desk converter | furniture | $215.00 | out of stock\n"
+    "\n"
+    "When the user asks for a recommendation, pick one product from the catalog above and "
+    "respond with a JSON object — no other text — containing exactly these fields, "
+    "copied verbatim from the catalog: "
     "product_id (string), name (string), category (string), price_usd (number), in_stock (boolean). "
     "Return only the JSON object; do not include explanations or markdown formatting."
 )

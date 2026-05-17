@@ -2,9 +2,9 @@
 
 [model]
 base_url = "http://localhost:11434/v1"
-model_name = "qwen3.5:9b-8k"
+model_name = "qwen3.5:9b-65k"
 temperature = 0.0
-timeout_seconds = 120.0
+timeout_seconds = 600.0
 # api_key = ""
 
 [limits]

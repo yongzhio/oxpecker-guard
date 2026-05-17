@@ -129,6 +129,32 @@ the run state, so a human reviewer can see what was suppressed.
 
 ---
 
+## Context window requirements
+
+The filing text is sent as the user message. The total prompt (system prompt +
+filing) must fit within the model's context window.
+
+The bundled `data/case_filing.txt` is ~290 words (~400–450 tokens including
+chat-template overhead), well within `qwen3.5:9b`'s default `num_ctx=4096`.
+
+If you supply a custom filing via `--filing`, keep it under ~2000 words to stay
+safe. Larger filings will cause Ollama to return a 500 error when the prompt
+exceeds `num_ctx`; the demo will report this as an `ErrorOutcome` with a
+`ReadTimeout`. To use a longer filing, increase the model's context window:
+
+```bash
+ollama run qwen3.5:9b --num-ctx 8192
+```
+
+or create a `Modelfile`:
+
+```
+FROM qwen3.5:9b
+PARAMETER num_ctx 8192
+```
+
+---
+
 ## Python version note
 
 Runs on Python 3.10 and later. Uses `tomli` backport on 3.10; stdlib `tomllib`

@@ -448,18 +448,33 @@ The `state.messages` list is a second independently auditable artifact. It recor
 
 ### Reproducibility
 
-A reader on a clean machine should be able to:
+A reader on a clean machine has two verification paths:
+
+- **Tests:** No LLM required. `make check` exercises every guard and every
+  structural transition in seconds. This is the canonical verification.
+- **CLI demos:** Run the example scripts against a local Ollama-served
+  Qwen3 9B model. Useful for seeing the demos in motion and observing
+  real model behavior. Requires the hardware setup below.
+
+A reader on a clean machine can verify the patterns via the test suite (no LLM required) or by running the CLI demos against a local Ollama-served Qwen3 9B model. See the "Tests vs. demos" section above for which path suits which audience.
 
 ```bash
 git clone https://github.com/yongzhio/oxpecker-guard
 cd oxpecker-guard
-# install LM Studio or Ollama (one-time)
-ollama pull qwen2.5-coder:32b   # or via LM Studio UI
-pip install -e .
-# (demos appear in v0.1+)
+pip install -e ".[dev]"
+
+# Install Ollama from https://ollama.com, then:
+ollama pull qwen3.5:9b
+ollama create qwen3.5:9b-65k -f examples/qwen3-9b-65k.Modelfile
+
+# Verify all guards work (no LLM required):
+make check
+
+# Run a demo against the live model:
+python -m examples.ex04a_tool_allowlist.run_demo "write hello world to /tmp/test.txt"
 ```
 
-…and see documented failure rates and containment behaviour with the audit log written to `runs/`.
+Audit logs land in `runs/exNN/audit/<run_id>.jsonl`. See each demo's README for details on inspecting them.
 
 ---
 

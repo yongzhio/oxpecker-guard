@@ -46,6 +46,24 @@ python -m examples.ex04a_tool_allowlist.run_demo "send a status report" \
     --config examples/ex04a_tool_allowlist/config.toml
 ```
 
+### What about those "no outgoing edges" warnings?
+
+When you run the demo you'll see two lines at startup:
+
+```
+node 'refuse' has no outgoing edges; run will complete there
+node 'done' has no outgoing edges; run will complete there
+```
+
+These are expected. The orchestrator's graph builder warns about nodes
+with no outgoing edges so a builder can catch accidental orphan nodes
+early. In this graph, `refuse` and `done` are intentional terminals:
+when the run reaches them, the graph is complete.
+
+Per decision 24 of the design notes, the orchestrator doesn't treat
+"no outgoing edges" as an error — it leaves that judgment to the
+builder — so the warnings stay visible.
+
 ---
 
 ## Configuration

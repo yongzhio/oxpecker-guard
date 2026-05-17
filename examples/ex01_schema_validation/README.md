@@ -46,6 +46,19 @@ With a custom config:
 python -m examples.ex01_schema_validation.run_demo --config examples/ex01_schema_validation/config.toml
 ```
 
+### What about the "no outgoing edges" warning?
+
+When you run the demo you'll see this line at startup:
+
+```
+node 'done' has no outgoing edges; run will complete there
+```
+
+This is expected. `done` is an intentional terminal node. The orchestrator
+warns about nodes with no outgoing edges at build time so accidental orphan
+nodes are caught early; it does not treat the absence of outgoing edges as
+an error (decision 24 of the design notes).
+
 ---
 
 ## Example prompts and expected outcomes

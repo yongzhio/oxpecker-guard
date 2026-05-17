@@ -57,6 +57,19 @@ With a custom config:
 python -m examples.ex06_name_protection.run_demo --config /path/to/config.toml
 ```
 
+### What about the "no outgoing edges" warning?
+
+When you run the demo you'll see this line at startup:
+
+```
+node 'done' has no outgoing edges; run will complete there
+```
+
+This is expected. `done` is an intentional terminal node. The orchestrator
+warns about nodes with no outgoing edges at build time so accidental orphan
+nodes are caught early; it does not treat the absence of outgoing edges as
+an error (decision 24 of the design notes).
+
 ---
 
 ## How the guard works

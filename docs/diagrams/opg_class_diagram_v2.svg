@@ -1,0 +1,300 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1600 1480" font-family="Helvetica, Arial, sans-serif" role="img">
+  <title>OPG class diagram (implemented v0.1)</title>
+  <desc>UML class diagram reflecting the implemented v0.1 orchestrator core plus the gate-node foundation after Design Review 1, v1.2 review, v1.3 fixes, and the ITEM 7 note-field rollback. Five logical zones: state and audit, graph types, graph runner and outcomes, checkpoint, config and model client. Green-tinted classes and members are added since v0.</desc>
+
+  <rect width="1600" height="1480" fill="#ffffff"/>
+
+  <defs>
+    <marker id="composition" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="14" markerHeight="10" orient="auto">
+      <polygon points="0,5 7,0 14,5 7,10" fill="#111" stroke="#111" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 22px; font-weight: 600; fill: #111; }
+    .subtitle { font-size: 13px; fill: #555; }
+    .zone-label { font-size: 13px; font-weight: 700; fill: #5F5E5A; letter-spacing: 0.5px; }
+    .class-name { font-size: 14px; font-weight: 600; fill: #111; }
+    .class-name-abstract { font-size: 14px; font-weight: 600; font-style: italic; fill: #085041; }
+    .class-name-new { font-size: 14px; font-weight: 600; fill: #085041; }
+    .field { font-size: 12px; fill: #333; }
+    .field-new { font-size: 12px; fill: #0F6E56; font-weight: 500; }
+    .method { font-size: 12px; fill: #185FA5; font-style: italic; }
+    .method-new { font-size: 12px; fill: #085041; font-style: italic; font-weight: 500; }
+    .method-abstract { font-size: 12px; fill: #085041; font-style: italic; font-weight: 600; }
+    .legend-txt { font-size: 12px; fill: #444; }
+    .rel-label { font-size: 11px; fill: #666; font-style: italic; }
+    .zone-divider { stroke: #B4B2A9; stroke-width: 0.4; stroke-dasharray: 4 4; }
+  </style>
+
+  <text class="title" x="800" y="32" text-anchor="middle">OPG class diagram (implemented v0.1)</text>
+  <text class="subtitle" x="800" y="54" text-anchor="middle">Reflects code after Design Review 1, v1.2 review, v1.3 fixes, and the v1.3 ITEM 7 note-field rollback. Green-shaded items were added since v0.</text>
+
+  <rect x="40" y="72" width="430" height="44" rx="6" fill="#FAFAF8" stroke="#D3D1C7" stroke-width="0.6"/>
+  <rect x="52" y="82" width="14" height="14" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8" rx="2"/>
+  <text class="legend-txt" x="74" y="93">existing in v0</text>
+  <rect x="174" y="82" width="14" height="14" fill="#E1F5EE" stroke="#085041" stroke-width="0.8" rx="2"/>
+  <text class="legend-txt" x="196" y="93">added since v0</text>
+  <line x1="296" y1="106" x2="320" y2="106" stroke="#111" stroke-width="1.2"/>
+  <polygon points="320,101 324,106 320,111 316,106" fill="#111"/>
+  <text class="legend-txt" x="332" y="109">composition</text>
+  <text class="legend-txt" x="296" y="93" font-style="italic">italic = abstract</text>
+
+  <text class="zone-label" x="40" y="150">ZONE 1 — STATE AND AUDIT  (opg/core/state.py, opg/core/audit.py)</text>
+  <line x1="40" y1="158" x2="1560" y2="158" class="zone-divider"/>
+
+  <rect x="40" y="170" width="260" height="160" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="40" y1="195" x2="300" y2="195" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="170" y="188" text-anchor="middle">RunState</text>
+  <text class="field" x="50" y="214">+ run_id: UUID</text>
+  <text class="field" x="50" y="230">+ started_at: datetime</text>
+  <text class="field" x="50" y="246">+ user_id: str or None</text>
+  <text class="field" x="50" y="262">+ messages: list[Message]</text>
+  <text class="field" x="50" y="278">+ counters: Counters</text>
+  <line x1="40" y1="290" x2="300" y2="290" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method" x="50" y="308">+ append_message(Message)</text>
+
+  <rect x="320" y="170" width="220" height="130" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="320" y1="195" x2="540" y2="195" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="430" y="188" text-anchor="middle">Counters</text>
+  <text class="field" x="330" y="214">+ iterations: int</text>
+  <text class="field" x="330" y="230">+ model_calls: int</text>
+  <text class="field" x="330" y="246">+ tool_calls: int</text>
+  <text class="field" x="330" y="262">+ input_tokens: int</text>
+  <text class="field" x="330" y="278">+ output_tokens: int</text>
+
+  <line x1="300" y1="278" x2="320" y2="244" stroke="#111" stroke-width="1.2" marker-end="url(#composition)"/>
+
+  <rect x="560" y="170" width="240" height="130" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="560" y1="195" x2="800" y2="195" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="680" y="188" text-anchor="middle">Message</text>
+  <text class="field" x="570" y="214">+ role: Role</text>
+  <text class="field" x="570" y="230">+ content: str</text>
+  <text class="field" x="570" y="246">+ tool_calls: list[ToolCall]</text>
+  <text class="field" x="570" y="262">+ tool_result: ToolResult or None</text>
+
+  <line x1="300" y1="262" x2="560" y2="220" stroke="#111" stroke-width="1.2" marker-end="url(#composition)"/>
+
+  <rect x="820" y="170" width="260" height="140" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="820" y1="195" x2="1080" y2="195" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="950" y="188" text-anchor="middle">AuditLog</text>
+  <text class="field" x="830" y="214">+ run_id: UUID</text>
+  <text class="field" x="830" y="230">+ path: Path</text>
+  <line x1="820" y1="242" x2="1080" y2="242" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method" x="830" y="260">+ open(run_id, dir) AuditLog</text>
+  <text class="method" x="830" y="278">+ emit(event_type, payload)</text>
+
+  <rect x="1100" y="170" width="280" height="180" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="1100" y1="195" x2="1380" y2="195" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="1240" y="188" text-anchor="middle">AuditEvent</text>
+  <text class="field" x="1110" y="214">+ schema_version: int</text>
+  <text class="field" x="1110" y="230">+ event_id: UUID</text>
+  <text class="field" x="1110" y="246">+ run_id: UUID</text>
+  <text class="field" x="1110" y="262">+ timestamp: datetime</text>
+  <text class="field" x="1110" y="278">+ event_type: EventType</text>
+  <text class="field" x="1110" y="294">+ payload: dict</text>
+  <line x1="1100" y1="306" x2="1380" y2="306" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="field-new" x="1110" y="322">EventType includes:</text>
+  <text class="field-new" x="1110" y="338">gate_enter, gate_signal,</text>
+  <text class="field-new" x="1110" y="354">checkpoint_save/resume/abandoned</text>
+
+  <line x1="1080" y1="232" x2="1100" y2="232" stroke="#111" stroke-width="1.2" marker-end="url(#composition)"/>
+
+  <text class="zone-label" x="40" y="395">ZONE 2 — GRAPH TYPES  (opg/core/graph.py)</text>
+  <line x1="40" y1="403" x2="1560" y2="403" class="zone-divider"/>
+
+  <rect x="40" y="415" width="220" height="120" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="40" y1="440" x2="260" y2="440" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="150" y="433" text-anchor="middle">Node</text>
+  <text class="field" x="50" y="459">+ name: str</text>
+  <text class="field" x="50" y="475">+ handler: NodeHandler</text>
+  <text class="field" x="50" y="491">+ kind: str</text>
+
+  <rect x="280" y="415" width="280" height="160" rx="6" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <line x1="280" y1="440" x2="560" y2="440" stroke="#085041" stroke-width="0.8"/>
+  <text class="class-name-abstract" x="420" y="433" text-anchor="middle">GateNode  (abstract)</text>
+  <text class="field-new" x="290" y="459">+ name: str</text>
+  <text class="field-new" x="290" y="475">+ signals: tuple[str, ...]</text>
+  <text class="field-new" x="290" y="491">+ routing: dict[str, str]</text>
+  <line x1="280" y1="503" x2="560" y2="503" stroke="#085041" stroke-width="0.6"/>
+  <text class="method-abstract" x="290" y="521">+ elicit_signal(state) str</text>
+  <text class="method-new" x="290" y="538" font-style="normal" font-weight="400" fill="#666">  (abstract; called by deployment</text>
+  <text class="method-new" x="290" y="554" font-style="normal" font-weight="400" fill="#666">   layer, NOT by runner)</text>
+
+  <rect x="580" y="415" width="220" height="100" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="580" y1="440" x2="800" y2="440" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="690" y="433" text-anchor="middle">Edge</text>
+  <text class="field" x="590" y="459">+ source: str</text>
+  <text class="field" x="590" y="475">+ target: str</text>
+  <text class="field" x="590" y="491">+ label: str</text>
+
+  <rect x="820" y="415" width="220" height="100" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="820" y1="440" x2="1040" y2="440" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="930" y="433" text-anchor="middle">GuardSlot</text>
+  <text class="field" x="830" y="459">+ guards: tuple[GuardFn, ...]</text>
+  <text class="field" x="830" y="479" font-style="italic" fill="#777">(node and position implicit</text>
+  <text class="field" x="830" y="495" font-style="italic" fill="#777"> in Graph's dict keys)</text>
+
+  <rect x="1060" y="415" width="280" height="200" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="1060" y1="440" x2="1340" y2="440" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="1200" y="433" text-anchor="middle">Graph</text>
+  <text class="field" x="1070" y="459">+ entry: str</text>
+  <text class="field" x="1070" y="475">+ nodes: dict[str, Node]</text>
+  <text class="field" x="1070" y="491">+ edges: dict[str, tuple[Edge, ...]]</text>
+  <text class="field-new" x="1070" y="507">+ before_slots: dict[str, GuardSlot]</text>
+  <text class="field-new" x="1070" y="523">+ after_slots: dict[str, GuardSlot]</text>
+  <text class="field-new" x="1070" y="539">+ gate_nodes: dict[str, GateNode]</text>
+  <line x1="1060" y1="551" x2="1340" y2="551" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method-new" x="1070" y="569">+ compute_hash() str</text>
+  <text class="method" x="1070" y="585" font-style="normal" font-weight="400" fill="#666">  (SHA-256 of structure including</text>
+  <text class="method" x="1070" y="601" font-style="normal" font-weight="400" fill="#666">   handler + guard identities)</text>
+
+  <!-- Composition arrows routed below the row of boxes to avoid crossing through GuardSlot's body -->
+  <path d="M 150 535 L 150 605 L 1060 605 L 1060 555" stroke="#111" stroke-width="1.2" fill="none" marker-end="url(#composition)"/>
+  <path d="M 420 575 L 420 605 L 1060 605 L 1060 555" stroke="#111" stroke-width="1.2" fill="none" marker-end="url(#composition)" opacity="0"/>
+  <path d="M 690 515 L 690 605 L 1060 605 L 1060 560" stroke="#111" stroke-width="1.2" fill="none" marker-end="url(#composition)"/>
+  <path d="M 930 515 L 930 605 L 1060 605 L 1060 565" stroke="#111" stroke-width="1.2" fill="none" marker-end="url(#composition)"/>
+  <path d="M 420 575 L 420 605 L 1060 605 L 1060 555" stroke="#111" stroke-width="1.2" fill="none" marker-end="url(#composition)"/>
+  <text class="rel-label" x="600" y="618" text-anchor="middle" fill="#444">Node, GateNode, Edge, and GuardSlot are composed into Graph</text>
+
+  <rect x="40" y="635" width="220" height="80" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="40" y1="660" x2="260" y2="660" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="150" y="653" text-anchor="middle">GuardPass</text>
+  <text class="field" x="50" y="677">+ guard_name: str</text>
+  <text class="field" x="50" y="693">+ detail: str</text>
+
+  <rect x="280" y="635" width="220" height="80" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="280" y1="660" x2="500" y2="660" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="390" y="653" text-anchor="middle">GuardReject</text>
+  <text class="field" x="290" y="677">+ guard_name: str</text>
+  <text class="field" x="290" y="693">+ reason: str</text>
+
+  <rect x="540" y="635" width="320" height="220" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="540" y1="660" x2="860" y2="660" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="700" y="653" text-anchor="middle">GraphBuilder</text>
+  <text class="method" x="550" y="677">+ node(name, handler, kind)</text>
+  <text class="method-new" x="550" y="693">+ gate_node(gate: GateNode)</text>
+  <text class="method" x="550" y="709">+ edge(source, target, label)</text>
+  <text class="method" x="550" y="725">+ guard_before(node, *guards)</text>
+  <text class="method" x="550" y="741">+ guard_after(node, *guards)</text>
+  <text class="method" x="550" y="757">+ build() Graph</text>
+  <text class="method" x="550" y="781" font-style="normal" font-weight="400" fill="#666">  build() validates: signal/routing</text>
+  <text class="method" x="550" y="797" font-style="normal" font-weight="400" fill="#666">  coverage, no before-slot on gates,</text>
+  <text class="method" x="550" y="813" font-style="normal" font-weight="400" fill="#666">  no outgoing edges from gates,</text>
+  <text class="method" x="550" y="829" font-style="normal" font-weight="400" fill="#666">  edge targets exist, etc.</text>
+
+  <text class="zone-label" x="40" y="900">ZONE 3 — RUNNER AND OUTCOMES  (opg/core/orchestrator.py)</text>
+  <line x1="40" y1="908" x2="1560" y2="908" class="zone-divider"/>
+
+  <rect x="40" y="920" width="320" height="220" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="40" y1="945" x2="360" y2="945" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="200" y="938" text-anchor="middle">GraphRunner</text>
+  <text class="field" x="50" y="964">+ graph: Graph</text>
+  <text class="field" x="50" y="980">+ config: OperatorConfig</text>
+  <text class="field" x="50" y="996">+ audit: AuditLog</text>
+  <text class="field-new" x="50" y="1012">+ checkpoint_store: CheckpointStore | None</text>
+  <line x1="40" y1="1024" x2="360" y2="1024" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method" x="50" y="1042">+ run(state) Outcome</text>
+  <text class="method-new" x="50" y="1058">+ resume(checkpoint_id, signal,</text>
+  <text class="method-new" x="62" y="1074">      metadata) Outcome</text>
+  <text class="method-new" x="50" y="1090">+ abandon_checkpoint(id, reason,</text>
+  <text class="method-new" x="62" y="1106">      abandoned_by)</text>
+
+  <rect x="380" y="920" width="220" height="100" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="380" y1="945" x2="600" y2="945" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="490" y="938" text-anchor="middle">CompletedOutcome</text>
+  <text class="field" x="390" y="964">+ final_node: str</text>
+  <text class="field" x="390" y="980">+ state: RunState</text>
+
+  <rect x="620" y="920" width="220" height="140" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="620" y1="945" x2="840" y2="945" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="730" y="938" text-anchor="middle">RejectedOutcome</text>
+  <text class="field" x="630" y="964">+ guard_name: str</text>
+  <text class="field" x="630" y="980">+ reason: str</text>
+  <text class="field" x="630" y="996">+ rejected_at_node: str</text>
+  <text class="field" x="630" y="1012">+ rejected_at_position: SlotPosition</text>
+  <text class="field" x="630" y="1028">+ state: RunState</text>
+
+  <rect x="860" y="920" width="260" height="120" rx="6" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <line x1="860" y1="945" x2="1120" y2="945" stroke="#085041" stroke-width="0.8"/>
+  <text class="class-name-new" x="990" y="938" text-anchor="middle">PausedOutcome</text>
+  <text class="field-new" x="870" y="964">+ checkpoint_id: UUID</text>
+  <text class="field-new" x="870" y="980">+ gate_name: str</text>
+  <text class="field-new" x="870" y="996">+ signals: tuple[str, ...]</text>
+  <text class="field-new" x="870" y="1012">+ state: RunState</text>
+
+  <rect x="1140" y="920" width="200" height="100" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="1140" y1="945" x2="1340" y2="945" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="1240" y="938" text-anchor="middle">CapExceededOutcome</text>
+  <text class="field" x="1150" y="964">+ cap_name: str</text>
+  <text class="field" x="1150" y="980">+ state: RunState</text>
+
+  <rect x="1360" y="920" width="200" height="120" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="1360" y1="945" x2="1560" y2="945" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="1460" y="938" text-anchor="middle">ErrorOutcome</text>
+  <text class="field" x="1370" y="964">+ error_type: str</text>
+  <text class="field" x="1370" y="980">+ message: str</text>
+  <text class="field" x="1370" y="996">+ node: str</text>
+  <text class="field" x="1370" y="1012">+ state: RunState</text>
+
+  <text class="rel-label" x="1000" y="900" text-anchor="middle" font-size="10" fill="#666">— run() returns one of five outcomes; resume() returns one of Completed / Rejected / Error</text>
+
+  <text class="zone-label" x="40" y="1180">ZONE 4 — CHECKPOINT  (opg/core/checkpoint.py)</text>
+  <line x1="40" y1="1188" x2="1560" y2="1188" class="zone-divider"/>
+
+  <rect x="40" y="1200" width="320" height="220" rx="6" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <line x1="40" y1="1225" x2="360" y2="1225" stroke="#085041" stroke-width="0.8"/>
+  <text class="class-name-new" x="200" y="1218" text-anchor="middle">Checkpoint</text>
+  <text class="field-new" x="50" y="1242">+ schema_version: int = 2</text>
+  <text class="field-new" x="50" y="1258">+ checkpoint_id: UUID</text>
+  <text class="field-new" x="50" y="1274">+ run_id: UUID</text>
+  <text class="field-new" x="50" y="1290">+ paused_at_node: str</text>
+  <text class="field-new" x="50" y="1306">+ gate_signals: tuple[str, ...]</text>
+  <text class="field-new" x="50" y="1322">+ graph_hash: str</text>
+  <text class="field-new" x="50" y="1338">+ status: pending|consumed|abandoned</text>
+  <text class="field-new" x="50" y="1354">+ consumed_at: datetime | None</text>
+  <text class="field-new" x="50" y="1370">+ abandoned_at: datetime | None</text>
+  <text class="field-new" x="50" y="1386">+ abandoned_reason: str | None</text>
+  <text class="field-new" x="50" y="1402">+ state: RunState</text>
+
+  <rect x="380" y="1200" width="320" height="180" rx="6" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <line x1="380" y1="1225" x2="700" y2="1225" stroke="#085041" stroke-width="0.8"/>
+  <text class="class-name-new" x="540" y="1218" text-anchor="middle">CheckpointStore</text>
+  <text class="field" x="390" y="1242">+ dir: Path</text>
+  <line x1="380" y1="1254" x2="700" y2="1254" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method" x="390" y="1271">+ at(dir) CheckpointStore</text>
+  <text class="method" x="390" y="1287">+ save(checkpoint) Path</text>
+  <text class="method" x="390" y="1303">+ load(checkpoint_id) Checkpoint</text>
+  <text class="method-new" x="390" y="1319">+ seal_consumed(id) Checkpoint</text>
+  <text class="method-new" x="390" y="1335">+ seal_abandoned(id, reason)</text>
+  <text class="method-new" x="402" y="1351">     Checkpoint</text>
+
+  <line x1="380" y1="1295" x2="360" y2="1295" stroke="#111" stroke-width="1.2" marker-end="url(#composition)"/>
+
+  <rect x="720" y="1200" width="240" height="120" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="720" y1="1225" x2="960" y2="1225" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="840" y="1218" text-anchor="middle">OperatorConfig</text>
+  <text class="field" x="730" y="1242">+ model: ModelConfig</text>
+  <text class="field" x="730" y="1258">+ limits: LimitsConfig</text>
+  <text class="field" x="730" y="1274">+ extras: dict[str, Any]</text>
+
+  <rect x="980" y="1200" width="240" height="120" rx="6" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.8"/>
+  <line x1="980" y1="1225" x2="1220" y2="1225" stroke="#5F5E5A" stroke-width="0.8"/>
+  <text class="class-name" x="1100" y="1218" text-anchor="middle">ModelClient</text>
+  <text class="field" x="990" y="1242">+ config: ModelConfig</text>
+  <line x1="980" y1="1254" x2="1220" y2="1254" stroke="#D3D1C7" stroke-width="0.6"/>
+  <text class="method" x="990" y="1271">+ chat(messages, tools)</text>
+
+  <rect x="1240" y="1200" width="320" height="180" rx="6" fill="#E1F5EE" stroke="#085041" stroke-width="0.8"/>
+  <line x1="1240" y1="1225" x2="1560" y2="1225" stroke="#085041" stroke-width="0.8"/>
+  <text class="class-name-new" x="1400" y="1218" text-anchor="middle">Exceptions</text>
+  <text class="field-new" x="1250" y="1242">CheckpointConsumedError</text>
+  <text class="field-new" x="1250" y="1258">  (raised by seal_consumed/abandoned)</text>
+  <text class="field-new" x="1250" y="1278">CheckpointAbandonedError</text>
+  <text class="field-new" x="1250" y="1294">  (raised by seal_consumed/abandoned)</text>
+  <text class="field-new" x="1250" y="1314">GraphVersionMismatchError</text>
+  <text class="field-new" x="1250" y="1330">  (raised by resume())</text>
+  <text class="field-new" x="1250" y="1350">  carries saved_hash, current_hash</text>
+
+  <text class="legend-txt" x="800" y="1455" text-anchor="middle">For cross-zone relationships: GraphRunner uses Graph, OperatorConfig, AuditLog, and CheckpointStore. Checkpoint contains a RunState snapshot.</text>
+</svg>

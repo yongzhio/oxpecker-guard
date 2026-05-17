@@ -1,0 +1,295 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1820 1950" font-family="Helvetica, Arial, sans-serif" role="img">
+  <title>Example 4a sequence diagram (implemented v0.1)</title>
+  <desc>Sequence diagram for example 4a tool allowlist with HITL gate, reflecting the implementation after v1.3 fixes. Two phases: run() pauses at the gate, then resume() completes the flow. Twelve participants. Audit-event order matches the v1.2 deviation F consume-before-emit ordering. Topology uses an explicit classify_blast_radius node (not an edge predicate, per decision 23).</desc>
+
+  <rect width="1820" height="1950" fill="#ffffff"/>
+
+  <defs>
+    <marker id="seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="seq-arrow-ret" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L9 5L2 9" fill="none" stroke="#666" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 22px; font-weight: 600; fill: #111; }
+    .subtitle { font-size: 13px; fill: #555; }
+    .phase-label { font-size: 14px; font-weight: 700; fill: #5F5E5A; }
+    .participant-box { fill: #EEEDFE; stroke: #534AB7; stroke-width: 0.8; }
+    .participant-text { font-size: 12px; font-weight: 600; fill: #3C3489; text-anchor: middle; }
+    .lifeline { stroke: #B4B2A9; stroke-width: 0.5; stroke-dasharray: 3 4; }
+    .msg-label { font-size: 11px; fill: #333; }
+    .msg-ret-label { font-size: 11px; fill: #666; font-style: italic; }
+    .note-box { fill: #FAEEDA; stroke: #854F0B; stroke-width: 0.6; }
+    .note-text { font-size: 11px; fill: #412402; font-weight: 500; }
+    .activation { fill: #E1F5EE; stroke: #085041; stroke-width: 0.6; }
+    .arrow-line { stroke: #333; stroke-width: 1.4; fill: none; }
+    .return-line { stroke: #666; stroke-width: 1.2; fill: none; stroke-dasharray: 5 3; }
+    .alt-box { fill: none; stroke: #5F5E5A; stroke-width: 0.8; stroke-dasharray: 6 3; }
+    .alt-label { font-size: 10px; font-weight: 600; fill: #5F5E5A; }
+    .phase-separator { stroke: #791F1F; stroke-width: 1.4; stroke-dasharray: 8 4; }
+    .checkpoint-info { font-size: 11px; fill: #72243E; font-style: italic; font-weight: 500; }
+  </style>
+
+  <text class="title" x="910" y="32" text-anchor="middle">Example 4a — sequence diagram (implemented v0.1)</text>
+  <text class="subtitle" x="910" y="54" text-anchor="middle">Tool allowlist with HITL approval_gate. Two phases: run() pauses at the gate, resume() completes the flow.</text>
+
+  <!-- Participant columns. 12 participants. Lifeline centers: 70, 200, 320, 460, 600, 730, 870, 1000, 1140, 1290, 1440, 1620 -->
+
+  <!-- Caller -->
+  <rect x="20" y="70" width="100" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="70" y="97">Caller</text>
+  <line x1="70" y1="114" x2="70" y2="1900" class="lifeline"/>
+
+  <!-- GraphRunner -->
+  <rect x="140" y="70" width="120" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="200" y="97">GraphRunner</text>
+  <line x1="200" y1="114" x2="200" y2="1900" class="lifeline"/>
+
+  <!-- AuditLog -->
+  <rect x="270" y="70" width="100" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="320" y="97">AuditLog</text>
+  <line x1="320" y1="114" x2="320" y2="1900" class="lifeline"/>
+
+  <!-- CheckpointStore -->
+  <rect x="385" y="70" width="150" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="460" y="97">CheckpointStore</text>
+  <line x1="460" y1="114" x2="460" y2="1900" class="lifeline"/>
+
+  <!-- receive_request -->
+  <rect x="545" y="70" width="110" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="600" y="92">receive_request</text>
+  <text class="participant-text" x="600" y="106" font-style="italic" font-weight="400">(handler)</text>
+  <line x1="600" y1="114" x2="600" y2="1900" class="lifeline"/>
+
+  <!-- call_model -->
+  <rect x="675" y="70" width="110" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="730" y="92">call_model</text>
+  <text class="participant-text" x="730" y="106" font-style="italic" font-weight="400">(handler)</text>
+  <line x1="730" y1="114" x2="730" y2="1900" class="lifeline"/>
+
+  <!-- ModelClient -->
+  <rect x="815" y="70" width="110" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="870" y="97">ModelClient</text>
+  <line x1="870" y1="114" x2="870" y2="1900" class="lifeline"/>
+
+  <!-- allowlist_guard -->
+  <rect x="940" y="70" width="120" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="1000" y="97">allowlist_guard</text>
+  <line x1="1000" y1="114" x2="1000" y2="1900" class="lifeline"/>
+
+  <!-- classify_blast_radius -->
+  <rect x="1075" y="70" width="130" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="1140" y="89">classify</text>
+  <text class="participant-text" x="1140" y="101">_blast_radius</text>
+  <text class="participant-text" x="1140" y="111" font-style="italic" font-weight="400" font-size="10">(handler)</text>
+  <line x1="1140" y1="114" x2="1140" y2="1900" class="lifeline"/>
+
+  <!-- approval_gate -->
+  <rect x="1225" y="70" width="130" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="1290" y="97">approval_gate</text>
+  <line x1="1290" y1="114" x2="1290" y2="1900" class="lifeline"/>
+
+  <!-- dispatch_approved -->
+  <rect x="1370" y="70" width="140" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="1440" y="92">dispatch_approved</text>
+  <text class="participant-text" x="1440" y="106" font-style="italic" font-weight="400">(handler)</text>
+  <line x1="1440" y1="114" x2="1440" y2="1900" class="lifeline"/>
+
+  <!-- ToolDispatcher -->
+  <rect x="1545" y="70" width="150" height="44" rx="4" class="participant-box"/>
+  <text class="participant-text" x="1620" y="97">ToolDispatcher</text>
+  <line x1="1620" y1="114" x2="1620" y2="1900" class="lifeline"/>
+
+  <!-- ======================= PHASE 1 ======================= -->
+  <text class="phase-label" x="70" y="140">PHASE 1 — run() pauses at the gate</text>
+
+  <!-- 1. Caller -> Runner: run(state) -->
+  <line x1="70" y1="170" x2="200" y2="170" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="135" y="164" text-anchor="middle">run(state)</text>
+
+  <!-- 2. Runner -> Audit: emit(run_start) -->
+  <line x1="200" y1="200" x2="320" y2="200" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="194" text-anchor="middle">emit(run_start)</text>
+
+  <!-- receive_request node -->
+  <rect x="210" y="220" width="150" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="285" y="234" text-anchor="middle">node: receive_request</text>
+
+  <rect x="595" y="245" width="10" height="50" class="activation"/>
+  <line x1="200" y1="260" x2="600" y2="260" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="400" y="254" text-anchor="middle">handler(state)</text>
+  <line x1="600" y1="285" x2="200" y2="285" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="400" y="280" text-anchor="middle">returns None</text>
+
+  <!-- call_model node -->
+  <rect x="210" y="305" width="150" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="285" y="319" text-anchor="middle">node: call_model</text>
+
+  <rect x="725" y="335" width="10" height="120" class="activation"/>
+  <line x1="200" y1="350" x2="730" y2="350" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="465" y="344" text-anchor="middle">handler(state)</text>
+
+  <rect x="865" y="370" width="10" height="50" class="activation"/>
+  <line x1="730" y1="385" x2="870" y2="385" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="800" y="379" text-anchor="middle">chat(messages, tools)</text>
+
+  <line x1="870" y1="415" x2="730" y2="415" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="800" y="410" text-anchor="middle">ModelResponse, tool_call: write_file</text>
+
+  <line x1="730" y1="445" x2="200" y2="445" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="465" y="440" text-anchor="middle">returns None (state has new assistant message with tool_call)</text>
+
+  <!-- After-slot on call_model -->
+  <rect x="210" y="465" width="260" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="340" y="479" text-anchor="middle">after-slot on call_model fires</text>
+
+  <rect x="995" y="495" width="10" height="40" class="activation"/>
+  <line x1="200" y1="510" x2="1000" y2="510" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="600" y="504" text-anchor="middle">check(state)</text>
+
+  <!-- Alt frame: allowlist guard verdict -->
+  <rect x="170" y="540" width="900" height="120" class="alt-box"/>
+  <rect x="170" y="540" width="60" height="18" fill="#5F5E5A"/>
+  <text class="alt-label" x="178" y="553" fill="#FFFFFF">alt</text>
+  <text class="alt-label" x="240" y="553">tool not on allowlist</text>
+
+  <line x1="1000" y1="572" x2="200" y2="572" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="600" y="567" text-anchor="middle">GuardReject</text>
+
+  <line x1="200" y1="592" x2="70" y2="592" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="135" y="587" text-anchor="middle">RejectedOutcome</text>
+
+  <line x1="170" y1="615" x2="1070" y2="615" stroke="#5F5E5A" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="alt-label" x="240" y="610">tool on allowlist (proceed)</text>
+
+  <line x1="1000" y1="640" x2="200" y2="640" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="600" y="635" text-anchor="middle">GuardPass</text>
+
+  <!-- emit guard_pass -->
+  <line x1="200" y1="675" x2="320" y2="675" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="669" text-anchor="middle">emit(guard_pass)</text>
+
+  <!-- Take single outgoing edge to classify_blast_radius node -->
+  <rect x="210" y="700" width="300" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="360" y="714" text-anchor="middle">edge: call_model → classify_blast_radius</text>
+
+  <!-- classify_blast_radius node -->
+  <rect x="1135" y="735" width="10" height="80" class="activation"/>
+  <line x1="200" y1="750" x2="1140" y2="750" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="670" y="744" text-anchor="middle">handler(state)</text>
+
+  <text class="msg-label" x="670" y="775" text-anchor="middle" font-style="italic" fill="#444">inspects last assistant message's tool_call,</text>
+  <text class="msg-label" x="670" y="788" text-anchor="middle" font-style="italic" fill="#444">classifies blast radius from operator config</text>
+
+  <!-- Alt frame: blast radius routing -->
+  <rect x="170" y="820" width="1350" height="80" class="alt-box"/>
+  <rect x="170" y="820" width="60" height="18" fill="#5F5E5A"/>
+  <text class="alt-label" x="178" y="833" fill="#FFFFFF">alt</text>
+  <text class="alt-label" x="240" y="833">low blast radius (read-only tool)</text>
+
+  <line x1="1140" y1="855" x2="200" y2="855" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="670" y="850" text-anchor="middle">returns "dispatch_direct" (explicit_next) — runner routes to direct dispatch (skip gate)</text>
+
+  <line x1="170" y1="875" x2="1520" y2="875" stroke="#5F5E5A" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="alt-label" x="240" y="870">high blast radius (consequential, e.g. write_file)</text>
+
+  <line x1="1140" y1="900" x2="200" y2="900" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="670" y="895" text-anchor="middle">returns "approval_gate" (explicit_next) — runner routes to gate</text>
+
+  <!-- Gate fires -->
+  <rect x="210" y="930" width="320" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="370" y="944" text-anchor="middle">gate node reached → _handle_gate() begins</text>
+
+  <line x1="200" y1="980" x2="320" y2="980" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="974" text-anchor="middle">emit(gate_enter)</text>
+  <text class="msg-label" x="260" y="996" text-anchor="middle" font-style="italic" fill="#555">{gate, signals, checkpoint_id}</text>
+
+  <line x1="200" y1="1025" x2="460" y2="1025" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="330" y="1019" text-anchor="middle">save(checkpoint, status=pending,</text>
+  <text class="msg-label" x="330" y="1033" text-anchor="middle">graph_hash, gate_signals)</text>
+
+  <line x1="460" y1="1055" x2="200" y2="1055" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="330" y="1050" text-anchor="middle">checkpoint persisted</text>
+
+  <line x1="200" y1="1080" x2="320" y2="1080" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="1074" text-anchor="middle">emit(checkpoint_save)</text>
+  <text class="msg-label" x="260" y="1096" text-anchor="middle" font-style="italic" fill="#555">{checkpoint_id, paused_at_node}</text>
+
+  <line x1="200" y1="1130" x2="70" y2="1130" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="135" y="1125" text-anchor="middle">PausedOutcome</text>
+  <text class="msg-ret-label" x="135" y="1140" text-anchor="middle">{checkpoint_id, gate_name,</text>
+  <text class="msg-ret-label" x="135" y="1154" text-anchor="middle">signals, state}</text>
+
+  <!-- ======================= PHASE BOUNDARY ======================= -->
+  <line x1="20" y1="1185" x2="1700" y2="1185" class="phase-separator"/>
+  <text class="checkpoint-info" x="860" y="1205" text-anchor="middle">Process exits. Flow state is on disk as &lt;checkpoint_id&gt;.json with status="pending". Audit log &lt;run_id&gt;.jsonl is closed.</text>
+  <text class="checkpoint-info" x="860" y="1223" text-anchor="middle">Deployment layer (chat UI, web push, MFA app, CLI) calls gate.elicit_signal(state) — orchestrator does NOT call elicit_signal.</text>
+  <text class="checkpoint-info" x="860" y="1241" text-anchor="middle">When the user signals back, the caller invokes runner.resume() with a fresh runner instance. The audit log is re-opened.</text>
+  <line x1="20" y1="1265" x2="1700" y2="1265" class="phase-separator"/>
+
+  <!-- ======================= PHASE 2 ======================= -->
+  <text class="phase-label" x="70" y="1295">PHASE 2 — resume() completes the flow</text>
+
+  <line x1="70" y1="1325" x2="200" y2="1325" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="135" y="1319" text-anchor="middle">resume(checkpoint_id,</text>
+  <text class="msg-label" x="135" y="1335" text-anchor="middle">signal="approved", metadata)</text>
+
+  <line x1="200" y1="1360" x2="460" y2="1360" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="330" y="1354" text-anchor="middle">load(checkpoint_id)</text>
+
+  <line x1="460" y1="1390" x2="200" y2="1390" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="330" y="1385" text-anchor="middle">Checkpoint</text>
+
+  <!-- Validation block -->
+  <rect x="210" y="1415" width="380" height="92" rx="6" fill="#FCEBEB" stroke="#791F1F" stroke-width="0.6"/>
+  <text class="note-text" x="400" y="1433" text-anchor="middle" fill="#501313" font-weight="600">orchestrator validates, in order:</text>
+  <text class="note-text" x="400" y="1449" text-anchor="middle" fill="#501313">1. checkpoint.status == pending  (raise CheckpointConsumedError / AbandonedError)</text>
+  <text class="note-text" x="400" y="1465" text-anchor="middle" fill="#501313">2. checkpoint.graph_hash matches current graph (GraphVersionMismatchError)</text>
+  <text class="note-text" x="400" y="1481" text-anchor="middle" fill="#501313">3. signal is in gate.signals enumeration (ValueError)</text>
+  <text class="note-text" x="400" y="1497" text-anchor="middle" fill="#501313">all validations gate the seal_consumed call below</text>
+
+  <!-- Seal consumed BEFORE emit gate_signal (deviation F) -->
+  <rect x="210" y="1525" width="380" height="40" rx="3" class="note-box"/>
+  <text class="note-text" x="400" y="1543" text-anchor="middle">consume-before-emit (v1.2 deviation F):</text>
+  <text class="note-text" x="400" y="1557" text-anchor="middle">seal_consumed first; audit emission second. Crash safety.</text>
+
+  <line x1="200" y1="1585" x2="460" y2="1585" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="330" y="1579" text-anchor="middle">seal_consumed(checkpoint_id)</text>
+
+  <line x1="460" y1="1610" x2="200" y2="1610" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="330" y="1605" text-anchor="middle">checkpoint sealed (status="consumed")</text>
+
+  <line x1="200" y1="1640" x2="320" y2="1640" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="1634" text-anchor="middle">emit(gate_signal)</text>
+  <text class="msg-label" x="260" y="1656" text-anchor="middle" font-style="italic" fill="#555">{gate, signal, checkpoint_id, metadata}</text>
+
+  <line x1="200" y1="1685" x2="320" y2="1685" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="260" y="1679" text-anchor="middle">emit(checkpoint_resume)</text>
+  <text class="msg-label" x="260" y="1701" text-anchor="middle" font-style="italic" fill="#555">{checkpoint_id, signal}</text>
+
+  <!-- Gate after-slot evaluation (Fix C from v1.2) -->
+  <rect x="210" y="1720" width="380" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="400" y="1734" text-anchor="middle">evaluate gate's after-slot if declared (v1.2 Fix C)</text>
+
+  <!-- Route via gate.routing[approved] -->
+  <rect x="210" y="1755" width="380" height="20" rx="3" class="note-box"/>
+  <text class="note-text" x="400" y="1769" text-anchor="middle">routes to dispatch_approved via gate.routing["approved"]</text>
+
+  <!-- dispatch_approved handler -->
+  <rect x="1435" y="1790" width="10" height="100" class="activation"/>
+  <line x1="200" y1="1805" x2="1440" y2="1805" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="820" y="1799" text-anchor="middle">handler(state)</text>
+
+  <rect x="1615" y="1825" width="10" height="50" class="activation"/>
+  <line x1="1440" y1="1840" x2="1620" y2="1840" class="arrow-line" marker-end="url(#seq-arrow)"/>
+  <text class="msg-label" x="1530" y="1834" text-anchor="middle">dispatch(tool_call)</text>
+
+  <line x1="1620" y1="1870" x2="1440" y2="1870" class="return-line" marker-end="url(#seq-arrow-ret)"/>
+  <text class="msg-ret-label" x="1530" y="1865" text-anchor="middle">tool_result</text>
+
+  <text class="msg-ret-label" x="820" y="1910" text-anchor="middle" font-size="12">Note: if signal is "rejected" instead, gate.routing["rejected"] routes to the refuse terminal; run ends as CompletedOutcome at refuse.</text>
+  <text class="msg-ret-label" x="820" y="1928" text-anchor="middle" font-size="12">Note: if user never signals, the checkpoint can be explicitly sealed as abandoned via runner.abandon_checkpoint() — no auto-timeout in v0.1.</text>
+</svg>

@@ -356,8 +356,7 @@ Each demo is structured around four questions: where does it fit in the architec
 v0    : Orchestrator core + gate-node foundations (no demos yet)
 v0.1  : Examples 1, 4a, 6
 v0.2  : Examples 4b, 7, 5
-v0.3  : Examples 2, 8a, 8b
-v0.4  : Example 3
+v0.3  : Examples 2, 8a, 8b, 3 (3 may slip if its threat model is not yet ready)
 v1    : Coverage gap-fill + final README + first public release
 ```
 

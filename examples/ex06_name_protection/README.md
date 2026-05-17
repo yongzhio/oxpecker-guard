@@ -131,27 +131,29 @@ the run state, so a human reviewer can see what was suppressed.
 
 ## Context window requirements
 
-The filing text is sent as the user message. The total prompt (system prompt +
-filing) must fit within the model's context window.
+Qwen3 models use an internal "thinking" mode: before producing the visible
+response, the model generates reasoning tokens that consume context. Combined
+with the filing prompt (~2300 tokens), this exhausts the default
+`num_ctx=4096`, causing Ollama to return a 500 and the demo to report a
+`ReadTimeout`.
 
-The bundled `data/case_filing.txt` is ~290 words (~400–450 tokens including
-chat-template overhead), well within `qwen3.5:9b`'s default `num_ctx=4096`.
-
-If you supply a custom filing via `--filing`, keep it under ~2000 words to stay
-safe. Larger filings will cause Ollama to return a 500 error when the prompt
-exceeds `num_ctx`; the demo will report this as an `ErrorOutcome` with a
-`ReadTimeout`. To use a longer filing, increase the model's context window:
+The demo's default model tag is `qwen3.5:9b-8k` (8192-token context window).
+Create it once with:
 
 ```bash
-ollama run qwen3.5:9b --num-ctx 8192
-```
-
-or create a `Modelfile`:
-
-```
+cat > /tmp/Modelfile <<'EOF'
 FROM qwen3.5:9b
 PARAMETER num_ctx 8192
+EOF
+ollama create qwen3.5:9b-8k -f /tmp/Modelfile
 ```
+
+8192 tokens leaves ~6000 tokens of headroom after the input for thinking output
+plus the summary. The extra KV cache costs roughly 10–15 MB of VRAM — negligible
+on a 16 GB GPU.
+
+If you supply a longer custom filing via `--filing`, increase `num_ctx`
+proportionally and recreate the model tag.
 
 ---
 

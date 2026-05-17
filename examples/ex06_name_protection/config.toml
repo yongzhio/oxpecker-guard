@@ -1,0 +1,17 @@
+# Example 6 — operator configuration
+
+[model]
+base_url = "http://localhost:11434/v1"
+model_name = "qwen3.5:9b"
+temperature = 0.0
+timeout_seconds = 120.0
+# api_key = ""
+
+[limits]
+max_iterations = 10
+max_model_calls = 3
+
+[storage]
+case_filing_path = "examples/ex06_name_protection/data/case_filing.txt"
+protected_names_path = "examples/ex06_name_protection/data/protected_names.txt"
+checkpoint_dir = "runs/ex06"

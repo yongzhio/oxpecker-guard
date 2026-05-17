@@ -245,7 +245,9 @@ class GraphRunner:
             {
                 "checkpoint_id": str(checkpoint_id),
                 "reason": reason,
-                "abandoned_at": abandoned.abandoned_at.isoformat() if abandoned.abandoned_at else None,
+                "abandoned_at": abandoned.abandoned_at.isoformat()
+                if abandoned.abandoned_at
+                else None,
                 "abandoned_by": abandoned_by,
             },
         )

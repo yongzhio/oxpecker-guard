@@ -323,6 +323,51 @@ async def test_resume_with_changed_graph_raises_version_mismatch(tmp_path: Path)
 
 
 @pytest.mark.asyncio
+async def test_resume_with_modified_gate_signals_raises_version_mismatch(tmp_path: Path) -> None:
+    """If a gate's signal enumeration changes between pause and resume, the
+    graph hash changes and resume is refused.
+
+    This is the gate-specific case of decision 18: the signal vocabulary the
+    human signed off on is part of the flow's identity. Adding, removing, or
+    renaming signals retroactively changes the meaning of any pending checkpoint
+    against that gate.
+    """
+    gate_a = SimpleGate(
+        name="review_gate",
+        signals=("approved", "rejected"),
+        routing={"approved": "done", "rejected": "refuse"},
+    )
+    graph_a = _build_graph(gate_a)
+
+    state = RunState()
+    store = CheckpointStore.at(tmp_path / "cp")
+    with AuditLog.open(state.run_id, dir=tmp_path) as audit:
+        runner_a = _make_runner(graph_a, audit, store)
+        paused = await runner_a.run(state)
+        assert isinstance(paused, PausedOutcome)
+
+        # Same topology and routing targets, but signals widened with "escalate"
+        gate_b = SimpleGate(
+            name="review_gate",
+            signals=("approved", "rejected", "escalate"),
+            routing={"approved": "done", "rejected": "refuse", "escalate": "done"},
+        )
+        graph_b = (
+            GraphBuilder(entry="work")
+            .node("work", handler=noop)
+            .node("done", handler=noop)
+            .node("refuse", handler=noop)
+            .gate_node(gate_b)
+            .edge("work", "review_gate")
+            .build()
+        )
+        runner_b = _make_runner(graph_b, audit, store)
+
+        with pytest.raises(GraphVersionMismatchError):
+            await runner_b.resume(paused.checkpoint_id, "approved")
+
+
+@pytest.mark.asyncio
 async def test_resume_with_swapped_handler_raises_version_mismatch(tmp_path: Path) -> None:
     """If a node handler is swapped to a different named function between pause
     and resume, the graph hash changes and resume is refused.
@@ -450,7 +495,9 @@ async def test_checkpoint_abandoned_payload_contains_abandoned_at(tmp_path: Path
         runner = _make_runner(graph, audit, store)
         paused = await runner.run(state)
         assert isinstance(paused, PausedOutcome)
-        runner.abandon_checkpoint(paused.checkpoint_id, reason="timed out", abandoned_by="scheduler")
+        runner.abandon_checkpoint(
+            paused.checkpoint_id, reason="timed out", abandoned_by="scheduler"
+        )
 
     events = read_log(tmp_path / f"{state.run_id}.jsonl")
     abandoned_events = [e for e in events if e.event_type == "checkpoint_abandoned"]
@@ -520,6 +567,7 @@ async def test_gate_node_after_slot_rejection_halts_resume(tmp_path: Path) -> No
         paused = await runner.run(state)
         assert isinstance(paused, PausedOutcome)
         from opg.core.orchestrator import RejectedOutcome
+
         outcome = await runner.resume(paused.checkpoint_id, "approved")
 
     assert isinstance(outcome, RejectedOutcome)

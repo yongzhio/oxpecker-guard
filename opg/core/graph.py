@@ -449,12 +449,10 @@ class GraphBuilder:
 
         # Freeze
         before_slots = {
-            name: GuardSlot(guards=tuple(guards))
-            for name, guards in self._before_slots.items()
+            name: GuardSlot(guards=tuple(guards)) for name, guards in self._before_slots.items()
         }
         after_slots = {
-            name: GuardSlot(guards=tuple(guards))
-            for name, guards in self._after_slots.items()
+            name: GuardSlot(guards=tuple(guards)) for name, guards in self._after_slots.items()
         }
         edges: dict[str, tuple[Edge, ...]] = {src: tuple(es) for src, es in self._edges.items()}
         return Graph(
